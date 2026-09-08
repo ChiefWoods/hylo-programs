@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
@@ -29,8 +30,7 @@ pub struct InitializeUsdc<'info> {
     /// CHECK: IDL metadata: no additional constraints.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
-    /// CHECK: IDL metadata: address=ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL.
-    pub associated_token_program: UncheckedAccount<'info>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 

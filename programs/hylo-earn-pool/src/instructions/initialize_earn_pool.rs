@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
@@ -23,8 +24,7 @@ pub struct InitializeEarnPool<'info> {
     pub stablecoin_pool: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[104,121,85,83,68]}],"program":{"kind":"const","value":[245,187,72,160,4,116,48,134,197,164,152,189,233,219,27,124,201,65,103,243,58,82,140,90,13,150,83,40,223,158,124,33]}}.
     pub stablecoin_mint: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL.
-    pub associated_token_program: UncheckedAccount<'info>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     /// CHECK: IDL metadata: no additional constraints.

@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
@@ -24,8 +25,7 @@ pub struct WithdrawFees<'info> {
     pub treasury_ata: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub fee_token_mint: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL.
-    pub associated_token_program: UncheckedAccount<'info>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }

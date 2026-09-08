@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
@@ -39,8 +40,7 @@ pub struct RegisterExo<'info> {
     /// CHECK: IDL metadata: address=metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s.
     pub metadata_program: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
-    /// CHECK: IDL metadata: address=ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL.
-    pub associated_token_program: UncheckedAccount<'info>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     /// CHECK: IDL metadata: address=SysvarRent111111111111111111111111111111111.
     pub rent: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
