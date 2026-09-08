@@ -1,3 +1,4 @@
+use crate::program::HyloEarnPool;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
@@ -29,8 +30,7 @@ pub struct InitializeEarnPool<'info> {
     pub system_program: Program<'info, System>,
     /// CHECK: IDL metadata: no additional constraints.
     pub program_data: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=HysTabVUfmQBFcmzu1ctRd1Y1fxd66RBpboy1bmtDSQQ.
-    pub hylo_earn_pool: UncheckedAccount<'info>,
+    pub hylo_earn_pool: Program<'info, HyloEarnPool>,
 }
 
 pub fn handler(ctx: Context<InitializeEarnPool>) -> Result<()> {

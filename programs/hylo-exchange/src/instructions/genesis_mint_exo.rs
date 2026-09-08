@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 
@@ -9,7 +11,7 @@ pub struct GenesisMintExo<'info> {
     /// CHECK: IDL metadata: writable; signer; relations=hylo.
     #[account(mut)]
     pub admin: Signer<'info>,
-    /// CHECK: IDL metadata: address=BzaxDc5L5zvnMfXVjpdynRKrXp8uETaUZW6bYigTM2fe.
+    #[account(address = Pubkey::from_str("BzaxDc5L5zvnMfXVjpdynRKrXp8uETaUZW6bYigTM2fe").unwrap())]
     pub dead: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[104,121,108,111]}]}.
     pub hylo: UncheckedAccount<'info>,

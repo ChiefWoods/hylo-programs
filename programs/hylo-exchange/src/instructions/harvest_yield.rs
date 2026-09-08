@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
+use hylo_earn_pool::program::HyloEarnPool;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -26,8 +27,7 @@ pub struct HarvestYield<'info> {
     pub pool_auth: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=HysTabVUfmQBFcmzu1ctRd1Y1fxd66RBpboy1bmtDSQQ.
-    pub hylo_earn_pool: UncheckedAccount<'info>,
+    pub hylo_earn_pool: Program<'info, HyloEarnPool>,
     /// CHECK: IDL metadata: relations=hylo.
     pub lst_registry: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: address=AddressLookupTab1e1111111111111111111111111.

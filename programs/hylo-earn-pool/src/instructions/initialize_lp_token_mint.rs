@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 
@@ -22,7 +24,7 @@ pub struct InitializeLpTokenMint<'info> {
     /// CHECK: IDL metadata: writable.
     #[account(mut)]
     pub lp_token_metadata: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s.
+    #[account(address = Pubkey::from_str("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s").unwrap())]
     pub metadata_program: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,

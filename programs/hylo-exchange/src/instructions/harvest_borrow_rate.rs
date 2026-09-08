@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
+use hylo_earn_pool::program::HyloEarnPool;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -38,8 +39,7 @@ pub struct HarvestBorrowRate<'info> {
     pub levercoin_mint: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=HysTabVUfmQBFcmzu1ctRd1Y1fxd66RBpboy1bmtDSQQ.
-    pub hylo_earn_pool: UncheckedAccount<'info>,
+    pub hylo_earn_pool: Program<'info, HyloEarnPool>,
     pub token_program: Program<'info, Token>,
 }
 

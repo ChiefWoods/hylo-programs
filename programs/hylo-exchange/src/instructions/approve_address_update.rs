@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+use crate::program::HyloExchange;
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
@@ -14,8 +15,7 @@ pub struct ApproveAddressUpdate<'info> {
     pub new_address: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub program_data: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn.
-    pub hylo_exchange: UncheckedAccount<'info>,
+    pub hylo_exchange: Program<'info, HyloExchange>,
 }
 
 pub fn handler(

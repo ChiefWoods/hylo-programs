@@ -25,6 +25,7 @@ test-sbf = []
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
 hylo-fix = { workspace = true }
+hylo-earn-pool = { path = "../hylo-earn-pool", features = ["cpi"] }
 
 [dev-dependencies]
 mollusk-svm = "~0.4"
