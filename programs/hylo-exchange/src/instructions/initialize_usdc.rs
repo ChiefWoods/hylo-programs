@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::Token;
+use anchor_spl::token::{Mint, Token};
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -25,8 +25,8 @@ pub struct InitializeUsdc<'info> {
     /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"account","path":"usdc_fee_auth"},{"kind":"const","value":[6,221,246,225,215,101,161,147,217,203,225,70,206,235,121,172,28,180,133,237,95,91,55,145,58,140,245,133,126,255,0,169]},{"kind":"account","path":"usdc_mint"}],"program":{"kind":"const","value":[140,151,37,143,78,36,137,241,187,61,16,41,20,142,13,131,11,90,19,153,218,255,16,132,4,142,123,216,219,233,248,89]}}.
     #[account(mut)]
     pub usdc_fee_vault: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v.
-    pub usdc_mint: UncheckedAccount<'info>,
+    #[account(address = anchor_spl::mint::USDC)]
+    pub usdc_mint: Account<'info, Mint>,
     /// CHECK: IDL metadata: no additional constraints.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,

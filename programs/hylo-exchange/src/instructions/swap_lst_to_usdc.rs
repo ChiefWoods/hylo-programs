@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
+use anchor_spl::token::{Mint, Token};
 use hylo_earn_pool::program::HyloEarnPool;
 
 #[allow(unused_imports)]
@@ -48,8 +48,8 @@ pub struct SwapLstToUsdc<'info> {
     pub user_usdc_ta: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub lst_mint: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v.
-    pub usdc_mint: UncheckedAccount<'info>,
+    #[account(address = anchor_spl::mint::USDC)]
+    pub usdc_mint: Account<'info, Mint>,
     /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[104,121,85,83,68]}]}.
     #[account(mut)]
     pub stablecoin_mint: UncheckedAccount<'info>,

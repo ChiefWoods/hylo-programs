@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
+use anchor_spl::token::{Mint, Token};
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -39,8 +39,8 @@ pub struct RedeemStablecoinUsdc<'info> {
     /// CHECK: IDL metadata: writable; relations=hylo; pda={"seeds":[{"kind":"const","value":[104,121,85,83,68]}]}.
     #[account(mut)]
     pub stablecoin_mint: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v.
-    pub usdc_mint: UncheckedAccount<'info>,
+    #[account(address = anchor_spl::mint::USDC)]
+    pub usdc_mint: Account<'info, Mint>,
     /// CHECK: IDL metadata: no additional constraints.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
