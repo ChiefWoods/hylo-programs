@@ -7,14 +7,14 @@ use {
 
 #[test]
 fn test_initialize() {
-    let program_id = hylo_programs::id();
+    let program_id = hylo_exchange::id();
 
-    let mollusk = Mollusk::new(&program_id, "hylo_programs");
+    let mollusk = Mollusk::new(&program_id, "hylo_exchange");
 
     let instruction = Instruction::new_with_bytes(
         program_id,
-        &hylo_programs::instruction::Initialize {}.data(),
-        hylo_programs::accounts::Initialize {}.to_account_metas(None),
+        &hylo_exchange::instruction::Initialize {}.data(),
+        hylo_exchange::accounts::Initialize {}.to_account_metas(None),
     );
 
     mollusk.process_and_validate_instruction(&instruction, &[], &[Check::success()]);

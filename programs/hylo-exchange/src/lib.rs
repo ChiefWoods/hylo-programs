@@ -12,7 +12,7 @@ pub use state::*;
 declare_id!("7wZRUBGZ2YQr1sjLPfweEyeDuuWXKXbAKR56NEcaBZ7C");
 
 #[program]
-pub mod hylo_programs {
+pub mod hylo_exchange {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {

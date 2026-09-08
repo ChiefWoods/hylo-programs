@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-hylo_programs = "7wZRUBGZ2YQr1sjLPfweEyeDuuWXKXbAKR56NEcaBZ7C"
+hylo_exchange = "7wZRUBGZ2YQr1sjLPfweEyeDuuWXKXbAKR56NEcaBZ7C"
 
 [registry]
 url = "https://api.apr.dev"
