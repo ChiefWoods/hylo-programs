@@ -1,0 +1,4 @@
+[resolver]
+# Prefer crates whose rust-version is <= workspace MSRV (1.84).
+# Platform-tools cargo cannot parse edition 2024 manifests.
+incompatible-rust-versions = "fallback"
