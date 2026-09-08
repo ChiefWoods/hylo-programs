@@ -9,6 +9,7 @@ resolver = "2"
 rust-version = "1.84"
 
 [workspace.dependencies]
+anchor-spl = "0.32.1"
 hylo-core = "2.5.0"
 hylo-fix = "0.8.0"
 
