@@ -4,6 +4,14 @@ members = [
 ]
 resolver = "2"
 
+[workspace.package]
+# Matches Solana platform-tools cargo 1.84 (no edition 2024).
+rust-version = "1.84"
+
+[workspace.dependencies]
+hylo-core = "2.5.0"
+hylo-fix = "0.8.0"
+
 [profile.release]
 overflow-checks = true
 lto = "fat"

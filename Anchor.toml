@@ -6,9 +6,9 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-hylo-earn-pool = "5EXJLgJrQKvcDxk9oGpVTwXaFTmuXVBGdvoJPVV9WTKj"
-hylo-router = "AxZp9FZpY1hACwSSLmnRrNisUjRHKPBVJda6MyvrQKip"
-hylo_exchange = "7wZRUBGZ2YQr1sjLPfweEyeDuuWXKXbAKR56NEcaBZ7C"
+hylo-earn-pool = "HysTabVUfmQBFcmzu1ctRd1Y1fxd66RBpboy1bmtDSQQ"
+hylo-router = "hyRouTRDAgn65xyyJ3L5c4k5SFmSdr3NxDV8Euzjy3f"
+hylo_exchange = "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
 
 [registry]
 url = "https://api.apr.dev"

@@ -3,6 +3,7 @@ name = "hylo-earn-pool"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
+rust-version.workspace = true
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -14,7 +15,7 @@ cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
-idl-build = ["anchor-lang/idl-build"]
+idl-build = ["anchor-lang/idl-build", "hylo-fix/idl-build"]
 anchor-debug = []
 custom-heap = []
 custom-panic = []
@@ -22,6 +23,7 @@ custom-panic = []
 
 [dependencies]
 anchor-lang = "0.32.1"
+hylo-fix = { workspace = true }
 
 
 [lints.rust]
