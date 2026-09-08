@@ -25,8 +25,7 @@ pub struct InitializeLpTokenMint<'info> {
     /// CHECK: IDL metadata: address=metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s.
     pub metadata_program: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
-    /// CHECK: IDL metadata: address=SysvarRent111111111111111111111111111111111.
-    pub rent: UncheckedAccount<'info>,
+    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
 }
 

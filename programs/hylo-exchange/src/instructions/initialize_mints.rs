@@ -33,8 +33,7 @@ pub struct InitializeMints<'info> {
     pub metadata_program: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    /// CHECK: IDL metadata: address=SysvarRent111111111111111111111111111111111.
-    pub rent: UncheckedAccount<'info>,
+    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
 }
 
