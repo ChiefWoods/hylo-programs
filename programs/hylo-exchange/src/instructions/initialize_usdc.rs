@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -27,12 +28,10 @@ pub struct InitializeUsdc<'info> {
     pub usdc_mint: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA.
-    pub token_program: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
     /// CHECK: IDL metadata: address=ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL.
     pub associated_token_program: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=11111111111111111111111111111111.
-    pub system_program: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 pub fn handler(

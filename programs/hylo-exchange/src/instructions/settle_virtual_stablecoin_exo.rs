@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -32,8 +33,7 @@ pub struct SettleVirtualStablecoinExo<'info> {
     pub stablecoin_mint: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA.
-    pub token_program: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
     /// CHECK: IDL metadata: address=HysTabVUfmQBFcmzu1ctRd1Y1fxd66RBpboy1bmtDSQQ.
     pub earn_pool: UncheckedAccount<'info>,
 }

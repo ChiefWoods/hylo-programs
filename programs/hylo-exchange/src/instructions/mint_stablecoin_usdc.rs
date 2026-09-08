@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -42,8 +43,7 @@ pub struct MintStablecoinUsdc<'info> {
     pub usdc_mint: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA.
-    pub token_program: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 pub fn handler(

@@ -15,8 +15,7 @@ pub struct ProposeAddressUpdate<'info> {
     pub proposal: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub new_address: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=11111111111111111111111111111111.
-    pub system_program: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 pub fn handler(

@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
 use crate::state::*;
@@ -24,10 +25,8 @@ pub struct InitializeEarnPool<'info> {
     pub stablecoin_mint: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: address=ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL.
     pub associated_token_program: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA.
-    pub token_program: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=11111111111111111111111111111111.
-    pub system_program: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
     /// CHECK: IDL metadata: no additional constraints.
     pub program_data: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: address=HysTabVUfmQBFcmzu1ctRd1Y1fxd66RBpboy1bmtDSQQ.

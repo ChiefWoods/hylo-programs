@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -34,8 +35,7 @@ pub struct UserWithdraw<'info> {
     /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[115,116,97,107,101,100,95,104,121,85,83,68]}]}.
     #[account(mut)]
     pub lp_token_mint: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA.
-    pub token_program: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 pub fn handler(

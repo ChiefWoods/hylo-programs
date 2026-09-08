@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -31,8 +32,7 @@ pub struct HarvestYield<'info> {
     pub lst_registry: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: address=AddressLookupTab1e1111111111111111111111111.
     pub lut_program: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA.
-    pub token_program: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {

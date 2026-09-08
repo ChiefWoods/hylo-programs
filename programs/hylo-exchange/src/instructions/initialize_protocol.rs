@@ -15,8 +15,7 @@ pub struct InitializeProtocol<'info> {
     pub hylo: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub treasury: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=11111111111111111111111111111111.
-    pub system_program: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
     /// CHECK: IDL metadata: no additional constraints.
     pub program_data: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: address=HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn.

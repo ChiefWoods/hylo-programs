@@ -17,8 +17,7 @@ pub struct InitializeLstRegistryCalculators<'info> {
     pub lst_registry: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: address=AddressLookupTab1e1111111111111111111111111.
     pub lut_program: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=11111111111111111111111111111111.
-    pub system_program: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 pub fn handler(ctx: Context<InitializeLstRegistryCalculators>) -> Result<()> {
