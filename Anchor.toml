@@ -6,6 +6,8 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
+hylo-earn-pool = "5EXJLgJrQKvcDxk9oGpVTwXaFTmuXVBGdvoJPVV9WTKj"
+hylo-router = "AxZp9FZpY1hACwSSLmnRrNisUjRHKPBVJda6MyvrQKip"
 hylo_exchange = "7wZRUBGZ2YQr1sjLPfweEyeDuuWXKXbAKR56NEcaBZ7C"
 
 [registry]
