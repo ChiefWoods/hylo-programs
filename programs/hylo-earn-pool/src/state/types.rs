@@ -2,13 +2,6 @@ use anchor_lang::prelude::*;
 pub use fix::prelude::UFixValue64;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct AbsorbLossEvent {
-    pub requested_loss: UFixValue64,
-    pub amount_stablecoin_burned: UFixValue64,
-    pub remaining_pool_balance: UFixValue64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
 pub struct DepositLimiter {
     pub limit: UFixValue64,
 }
@@ -35,15 +28,6 @@ pub struct LevercoinFees {
     pub normal: FeePair,
     pub sell_zone_1: FeePair,
     pub sell_zone_2: FeePair,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct PauseEvent {}
-
-/// Outstanding hyUSD debt owed to the earn pool after a Depeg absorption.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct PoolDrawdown {
-    pub ledger: VirtualStablecoin,
 }
 
 /// Floor/ceil deviation percentages for rebalance price curve construction.
@@ -80,41 +64,6 @@ pub struct TotalSolCache {
     pub total_sol: UFixValue64,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct UnpauseEvent {}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct UpdateDepositLimitEvent {
-    pub old_deposit_limit: UFixValue64,
-    pub new_deposit_limit: UFixValue64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct UpdateWithdrawalFeeEvent {
-    pub old_withdrawal_fee: UFixValue64,
-    pub new_withdrawal_fee: UFixValue64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct UpdateWithdrawalLimitEvent {
-    pub old_withdrawal_limit: UFixValue64,
-    pub new_withdrawal_limit: UFixValue64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct UserDepositEvent {
-    pub stablecoin_deposited: UFixValue64,
-    pub lp_token_nav: UFixValue64,
-    pub lp_token_minted: UFixValue64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct UserWithdrawEvent {
-    pub lp_token_burned: UFixValue64,
-    pub stablecoin_withdrawn: UFixValue64,
-    pub stablecoin_fees: UFixValue64,
-}
-
 /// Simple counter representing the supply of a "virtual" stablecoin.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
 pub struct VirtualStablecoin {
@@ -134,4 +83,10 @@ pub struct WithdrawalLimiter {
 pub struct YieldHarvestConfig {
     pub allocation: UFixValue64,
     pub fee: UFixValue64,
+}
+
+/// Outstanding hyUSD debt owed to the earn pool after a Depeg absorption.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
+pub struct PoolDrawdown {
+    pub ledger: VirtualStablecoin,
 }

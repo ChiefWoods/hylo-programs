@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[allow(unused_imports)]
-use crate::state::*;
+use crate::{events::*, state::*};
 
 #[derive(Accounts)]
 pub struct UpdateWithdrawalFee<'info> {
