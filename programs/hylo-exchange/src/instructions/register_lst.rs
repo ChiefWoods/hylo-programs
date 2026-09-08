@@ -42,7 +42,7 @@ pub struct RegisterLst<'info> {
     pub stake_pool_program_data: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub stake_pool_program: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=AddressLookupTab1e1111111111111111111111111.
+    #[account(address = solana_sdk_ids::address_lookup_table::ID)]
     pub lut_program: UncheckedAccount<'info>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,

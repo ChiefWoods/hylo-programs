@@ -15,7 +15,7 @@ pub struct InitializeLstRegistryCalculators<'info> {
     /// CHECK: IDL metadata: writable; relations=hylo.
     #[account(mut)]
     pub lst_registry: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=AddressLookupTab1e1111111111111111111111111.
+    #[account(address = solana_sdk_ids::address_lookup_table::ID)]
     pub lut_program: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }

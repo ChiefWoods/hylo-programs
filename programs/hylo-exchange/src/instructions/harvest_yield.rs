@@ -30,7 +30,7 @@ pub struct HarvestYield<'info> {
     pub hylo_earn_pool: Program<'info, HyloEarnPool>,
     /// CHECK: IDL metadata: relations=hylo.
     pub lst_registry: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: address=AddressLookupTab1e1111111111111111111111111.
+    #[account(address = solana_sdk_ids::address_lookup_table::ID)]
     pub lut_program: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
 }

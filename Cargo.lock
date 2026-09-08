@@ -1447,6 +1447,7 @@ dependencies = [
  "hylo-earn-pool",
  "hylo-fix",
  "mollusk-svm",
+ "solana-sdk-ids",
 ]
 
 [[package]]
