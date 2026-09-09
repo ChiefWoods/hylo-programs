@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
+use hylo_core::pyth::USDC_USD;
 use crate::constants::*;
 
 #[allow(unused_imports)]
@@ -42,7 +43,7 @@ pub struct InitializeUsdc<'info> {
     pub usdc_fee_vault: Account<'info, TokenAccount>,
     #[account(address = anchor_spl::mint::USDC)]
     pub usdc_mint: Account<'info, Mint>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Address is validated against USDC_USD.address in the handler.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -55,6 +56,9 @@ pub fn handler(
     oracle_interval_secs: u64,
     oracle_conf_tolerance: UFixValue64,
 ) -> Result<InitializeUsdcEvent> {
-    let _ = (ctx, swap_fee, oracle_interval_secs, oracle_conf_tolerance);
+    if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
+        return Err(ProgramError::InvalidAccountData.into());
+    }
+    let _ = (swap_fee, oracle_interval_secs, oracle_conf_tolerance);
     todo!()
 }

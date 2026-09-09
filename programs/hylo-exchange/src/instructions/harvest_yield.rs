@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use hylo_core::pyth::SOL_USD;
+
 use crate::constants::*;
 
 #[allow(unused_imports)]
@@ -50,7 +52,7 @@ pub struct HarvestYield<'info> {
         seeds::program = HYLO_EARN_POOL
     )]
     pub pool_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,
     /// CHECK: Hylo Earn Pool program address is constrained below.
     #[account(address = HYLO_EARN_POOL)]
@@ -64,6 +66,8 @@ pub struct HarvestYield<'info> {
 }
 
 pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
-    let _ = ctx;
+    if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
+        return Err(ProgramError::InvalidAccountData.into());
+    }
     todo!()
 }

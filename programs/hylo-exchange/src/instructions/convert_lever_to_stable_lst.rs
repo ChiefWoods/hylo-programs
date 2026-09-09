@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
+use hylo_core::pyth::SOL_USD;
 
 use crate::constants::*;
 
@@ -12,7 +13,7 @@ pub struct ConvertLeverToStableLst<'info> {
     pub user: Signer<'info>,
     #[account(mut, seeds = [HYLO], bump)]
     pub hylo: Account<'info, Hylo>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,
     #[account(mut, seeds = [HYUSD], bump)]
     pub stablecoin_mint: Account<'info, Mint>,
@@ -65,6 +66,9 @@ pub fn handler(
     amount_levercoin: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<ConvertLeverToStableLstEvent> {
-    let _ = (ctx, amount_levercoin, slippage_config);
+    if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
+        return Err(ProgramError::InvalidAccountData.into());
+    }
+    let _ = (amount_levercoin, slippage_config);
     todo!()
 }

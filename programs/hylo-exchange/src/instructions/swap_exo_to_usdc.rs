@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use hylo_core::pyth::USDC_USD;
+
 use crate::{constants::*, hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG}};
 
 #[allow(unused_imports)]
@@ -97,7 +99,7 @@ pub struct SwapExoToUsdc<'info> {
     pub levercoin_mint: Account<'info, Mint>,
     /// CHECK: IDL metadata: no additional constraints.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Address is validated against USDC_USD.address in the handler.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     /// CHECK: Hylo Earn Pool program address is constrained below.
@@ -110,6 +112,9 @@ pub fn handler(
     amount: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<SwapExoToUsdcEvent> {
-    let _ = (ctx, amount, slippage_config);
+    if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
+        return Err(ProgramError::InvalidAccountData.into());
+    }
+    let _ = (amount, slippage_config);
     todo!()
 }

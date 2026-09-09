@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use hylo_core::pyth::{SOL_USD, USDC_USD};
+
 use crate::{constants::*, hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG}};
 
 #[allow(unused_imports)]
@@ -95,9 +97,9 @@ pub struct SwapLstToUsdcAll<'info> {
     pub usdc_mint: Account<'info, Mint>,
     #[account(mut, seeds = [HYUSD], bump)]
     pub stablecoin_mint: Account<'info, Mint>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Address is validated against USDC_USD.address in the handler.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     /// CHECK: Hylo Earn Pool program address is constrained below.
@@ -109,6 +111,12 @@ pub fn handler(
     ctx: Context<SwapLstToUsdcAll>,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<SwapLstToUsdcEvent> {
-    let _ = (ctx, slippage_config);
+    if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
+        return Err(ProgramError::InvalidAccountData.into());
+    }
+    if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
+        return Err(ProgramError::InvalidAccountData.into());
+    }
+    let _ = slippage_config;
     todo!()
 }
