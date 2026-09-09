@@ -8,13 +8,6 @@ pub enum AddressField {
     PauseAuthority,
 }
 
-/// Per-epoch borrow rate for exogenous collateral without native yield.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
-pub struct BorrowRateConfig {
-    pub rate: UFixValue64,
-    pub fee: UFixValue64,
-}
-
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
 pub enum LstStakePoolProgram {
     Spl,

@@ -115,7 +115,7 @@ pub struct SwapExoToUsdcAll<'info> {
 pub fn handler(
     ctx: Context<SwapExoToUsdcAll>,
     slippage_config: Option<SlippageConfig>,
-) -> Result<SwapExoToUsdcEvent> {
+) -> Result<()> {
     if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }

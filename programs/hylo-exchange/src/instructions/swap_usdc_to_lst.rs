@@ -115,7 +115,7 @@ pub fn handler(
     ctx: Context<SwapUsdcToLst>,
     amount: u64,
     slippage_config: Option<SlippageConfig>,
-) -> Result<SwapUsdcToLstEvent> {
+) -> Result<()> {
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }

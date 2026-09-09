@@ -6,21 +6,22 @@ use crate::{events::*, state::*};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct UpdateLstSwapFee<'info> {
+pub struct UpdateUsdcMintFee<'info> {
     pub admin: Signer<'info>,
     #[account(
-        mut,
         seeds = [HYLO],
         bump,
         has_one = admin,
     )]
     pub hylo: Account<'info, Hylo>,
+    #[account(mut, seeds = [USDC_PAIR], bump)]
+    pub usdc_pair: Account<'info, UsdcPair>,
 }
 
 pub fn handler(
-    ctx: Context<UpdateLstSwapFee>,
-    new_lst_swap_fee: UFixValue64,
+    ctx: Context<UpdateUsdcMintFee>,
+    new_mint_fee: UFixValue64,
 ) -> Result<UpdateFeeEvent> {
-    let _ = (ctx, new_lst_swap_fee);
+    let _ = (ctx, new_mint_fee);
     todo!()
 }

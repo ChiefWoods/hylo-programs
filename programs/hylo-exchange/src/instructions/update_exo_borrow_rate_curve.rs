@@ -7,7 +7,7 @@ use crate::{events::*, state::*};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct UpdateExoBorrowRate<'info> {
+pub struct UpdateExoBorrowRateCurve<'info> {
     pub admin: Signer<'info>,
     #[account(
         seeds = [HYLO],
@@ -26,9 +26,9 @@ pub struct UpdateExoBorrowRate<'info> {
 }
 
 pub fn handler(
-    ctx: Context<UpdateExoBorrowRate>,
-    new_borrow_rate_config: BorrowRateConfig,
-) -> Result<UpdateExoBorrowRateEvent> {
-    let _ = (ctx, new_borrow_rate_config);
+    ctx: Context<UpdateExoBorrowRateCurve>,
+    new_curve_config: BorrowRateCurveConfig,
+) -> Result<UpdateBorrowRateCurveConfigEvent> {
+    let _ = (ctx, new_curve_config);
     todo!()
 }

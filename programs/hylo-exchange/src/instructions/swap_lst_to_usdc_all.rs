@@ -114,7 +114,7 @@ pub struct SwapLstToUsdcAll<'info> {
 pub fn handler(
     ctx: Context<SwapLstToUsdcAll>,
     slippage_config: Option<SlippageConfig>,
-) -> Result<SwapLstToUsdcEvent> {
+) -> Result<()> {
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }

@@ -111,6 +111,9 @@ pub use settle_virtual_stablecoin_exo::*;
 pub mod settle_virtual_stablecoin_lst;
 pub use settle_virtual_stablecoin_lst::*;
 
+pub mod settle_virtual_stablecoin_usdc;
+pub use settle_virtual_stablecoin_usdc::*;
+
 pub mod swap_exo_to_usdc;
 pub use swap_exo_to_usdc::*;
 
@@ -144,8 +147,11 @@ pub use unpause_protocol::*;
 pub mod unpause_usdc_pair;
 pub use unpause_usdc_pair::*;
 
-pub mod update_exo_borrow_rate;
-pub use update_exo_borrow_rate::*;
+pub mod update_exo_borrow_rate_curve;
+pub use update_exo_borrow_rate_curve::*;
+
+pub mod update_exo_borrow_rate_fee;
+pub use update_exo_borrow_rate_fee::*;
 
 pub mod update_exo_buy_curve;
 pub use update_exo_buy_curve::*;
@@ -207,8 +213,14 @@ pub use update_usdc_oracle_conf_tolerance::*;
 pub mod update_usdc_oracle_interval;
 pub use update_usdc_oracle_interval::*;
 
-pub mod update_usdc_swap_fee;
-pub use update_usdc_swap_fee::*;
+pub mod update_usdc_mint_fee;
+pub use update_usdc_mint_fee::*;
+
+pub mod update_usdc_redeem_fee;
+pub use update_usdc_redeem_fee::*;
+
+pub mod update_par_tolerance;
+pub use update_par_tolerance::*;
 
 pub mod update_yield_harvest_config;
 pub use update_yield_harvest_config::*;

@@ -63,13 +63,21 @@ pub struct InitializeUsdc<'info> {
 
 pub fn handler(
     ctx: Context<InitializeUsdc>,
-    swap_fee: UFixValue64,
+    mint_fee: UFixValue64,
+    redeem_fee: UFixValue64,
     oracle_interval_secs: u64,
     oracle_conf_tolerance: UFixValue64,
+    par_tolerance: UFixValue64,
 ) -> Result<InitializeUsdcEvent> {
     if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
-    let _ = (swap_fee, oracle_interval_secs, oracle_conf_tolerance);
+    let _ = (
+        mint_fee,
+        redeem_fee,
+        oracle_interval_secs,
+        oracle_conf_tolerance,
+        par_tolerance,
+    );
     todo!()
 }

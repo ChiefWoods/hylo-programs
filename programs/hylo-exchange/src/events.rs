@@ -102,9 +102,11 @@ pub struct InitializeLstVirtualStablecoinEvent {
 pub struct InitializeUsdcEvent {
     pub vault_auth_bump: u8,
     pub fee_auth_bump: u8,
-    pub swap_fee: UFixValue64,
+    pub mint_fee: UFixValue64,
+    pub redeem_fee: UFixValue64,
     pub oracle_interval_secs: u64,
     pub oracle_conf_tolerance: UFixValue64,
+    pub par_tolerance: UFixValue64,
 }
 
 #[event]
@@ -157,7 +159,6 @@ pub struct MintStablecoinUsdcEvent {
     pub usdc_deposited: UFixValue64,
     pub usdc_fees: UFixValue64,
     pub stablecoin_minted: UFixValue64,
-    pub usdc_usd_price: OraclePriceEvent,
     pub virtual_stablecoin_supply: UFixValue64,
 }
 
@@ -222,7 +223,6 @@ pub struct RedeemStablecoinUsdcEvent {
     pub stablecoin_burned: UFixValue64,
     pub stablecoin_fees: UFixValue64,
     pub usdc_withdrawn: UFixValue64,
-    pub usdc_usd_price: OraclePriceEvent,
     pub virtual_stablecoin_supply: UFixValue64,
 }
 
@@ -236,7 +236,7 @@ pub struct RegisterExoEvent {
     pub oracle: Pubkey,
     pub oracle_interval_secs: u64,
     pub oracle_conf_tolerance: UFixValue64,
-    pub borrow_rate: UFixValue64,
+    pub borrow_rate_curve_config: BorrowRateCurveConfig,
     pub borrow_rate_fee: UFixValue64,
 }
 
@@ -279,6 +279,13 @@ pub struct SettleVirtualStablecoinLstEvent {
     pub stablecoin_minted: UFixValue64,
     pub virtual_stablecoin_supply: UFixValue64,
     pub pool_drawdown_outstanding: UFixValue64,
+    pub pool_balance: UFixValue64,
+}
+
+#[event]
+pub struct SettleVirtualStablecoinUsdcEvent {
+    pub stablecoin_minted: UFixValue64,
+    pub virtual_stablecoin_supply: UFixValue64,
     pub pool_balance: UFixValue64,
 }
 
@@ -331,9 +338,9 @@ pub struct SwapUsdcToLstEvent {
 pub struct UnpauseEvent {}
 
 #[event]
-pub struct UpdateExoBorrowRateEvent {
-    pub old_borrow_rate_config: BorrowRateConfig,
-    pub new_borrow_rate_config: BorrowRateConfig,
+pub struct UpdateBorrowRateCurveConfigEvent {
+    pub old_curve_config: BorrowRateCurveConfig,
+    pub new_curve_config: BorrowRateCurveConfig,
 }
 
 #[event]
@@ -392,9 +399,15 @@ pub struct UpdateStablecoinMintThresholdEvent {
 }
 
 #[event]
-pub struct UpdateSwapFeeEvent {
-    pub old_swap_fee: UFixValue64,
-    pub new_swap_fee: UFixValue64,
+pub struct UpdateFeeEvent {
+    pub old_fee: UFixValue64,
+    pub new_fee: UFixValue64,
+}
+
+#[event]
+pub struct UpdateParToleranceEvent {
+    pub old_par_tolerance: UFixValue64,
+    pub new_par_tolerance: UFixValue64,
 }
 
 #[event]

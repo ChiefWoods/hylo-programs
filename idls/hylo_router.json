@@ -9,32 +9,80 @@
   "instructions": [
     {
       "name": "route",
-      "discriminator": [229, 23, 203, 151, 122, 227, 173, 42],
+      "discriminator": [
+        229,
+        23,
+        203,
+        151,
+        122,
+        227,
+        173,
+        42
+      ],
       "accounts": [],
       "args": [
-        { "name": "token_a", "type": "pubkey" },
-        { "name": "token_b", "type": "pubkey" },
-        { "name": "amount", "type": "u64" },
+        {
+          "name": "token_a",
+          "type": "pubkey"
+        },
+        {
+          "name": "token_b",
+          "type": "pubkey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
         {
           "name": "slippage_config",
-          "type": { "option": { "defined": { "name": "SlippageConfig" } } }
+          "type": {
+            "option": {
+              "defined": {
+                "name": "SlippageConfig"
+              }
+            }
+          }
         }
       ]
     }
   ],
   "errors": [
-    { "code": 6000, "name": "UnsupportedPair", "msg": "No valid route for given tokens." },
-    { "code": 6001, "name": "InvalidRouteAccounts", "msg": "Invalid accounts for route." }
+    {
+      "code": 6000,
+      "name": "UnsupportedPair",
+      "msg": "No valid route for given tokens."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidRouteAccounts",
+      "msg": "Invalid accounts for route."
+    }
   ],
   "types": [
     {
       "name": "SlippageConfig",
-      "docs": ["Client specified slippage tolerance paired with expected token amount."],
+      "docs": [
+        "Client specified slippage tolerance paired with expected token amount."
+      ],
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "expected_token_out", "type": { "defined": { "name": "UFixValue64" } } },
-          { "name": "slippage_tolerance", "type": { "defined": { "name": "UFixValue64" } } }
+          {
+            "name": "expected_token_out",
+            "type": {
+              "defined": {
+                "name": "UFixValue64"
+              }
+            }
+          },
+          {
+            "name": "slippage_tolerance",
+            "type": {
+              "defined": {
+                "name": "UFixValue64"
+              }
+            }
+          }
         ]
       }
     },
@@ -47,8 +95,14 @@
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "bits", "type": "u64" },
-          { "name": "exp", "type": "i8" }
+          {
+            "name": "bits",
+            "type": "u64"
+          },
+          {
+            "name": "exp",
+            "type": "i8"
+          }
         ]
       }
     }

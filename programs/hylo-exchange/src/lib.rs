@@ -139,11 +139,20 @@ pub mod hylo_exchange {
 
     pub fn initialize_usdc(
         ctx: Context<InitializeUsdc>,
-        swap_fee: UFixValue64,
+        mint_fee: UFixValue64,
+        redeem_fee: UFixValue64,
         oracle_interval_secs: u64,
         oracle_conf_tolerance: UFixValue64,
+        par_tolerance: UFixValue64,
     ) -> Result<InitializeUsdcEvent> {
-        initialize_usdc::handler(ctx, swap_fee, oracle_interval_secs, oracle_conf_tolerance)
+        initialize_usdc::handler(
+            ctx,
+            mint_fee,
+            redeem_fee,
+            oracle_interval_secs,
+            oracle_conf_tolerance,
+            par_tolerance,
+        )
     }
 
     pub fn mint_levercoin_exo(
@@ -256,7 +265,8 @@ pub mod hylo_exchange {
         oracle_interval_secs: u64,
         oracle_conf_tolerance: UFixValue64,
         stablecoin_mint_threshold: UFixValue64,
-        borrow_rate_config: BorrowRateConfig,
+        borrow_rate_curve_config: BorrowRateCurveConfig,
+        borrow_rate_fee: UFixValue64,
         levercoin_fees: LevercoinFees,
         sell_curve_config: RebalanceCurveConfig,
         buy_curve_config: RebalanceCurveConfig,
@@ -269,7 +279,8 @@ pub mod hylo_exchange {
             oracle_interval_secs,
             oracle_conf_tolerance,
             stablecoin_mint_threshold,
-            borrow_rate_config,
+            borrow_rate_curve_config,
+            borrow_rate_fee,
             levercoin_fees,
             sell_curve_config,
             buy_curve_config,
@@ -297,18 +308,24 @@ pub mod hylo_exchange {
         settle_virtual_stablecoin_lst::handler(ctx)
     }
 
+    pub fn settle_virtual_stablecoin_usdc(
+        ctx: Context<SettleVirtualStablecoinUsdc>,
+    ) -> Result<SettleVirtualStablecoinUsdcEvent> {
+        settle_virtual_stablecoin_usdc::handler(ctx)
+    }
+
     pub fn swap_exo_to_usdc(
         ctx: Context<SwapExoToUsdc>,
         amount: u64,
         slippage_config: Option<SlippageConfig>,
-    ) -> Result<SwapExoToUsdcEvent> {
+    ) -> Result<()> {
         swap_exo_to_usdc::handler(ctx, amount, slippage_config)
     }
 
     pub fn swap_exo_to_usdc_all(
         ctx: Context<SwapExoToUsdcAll>,
         slippage_config: Option<SlippageConfig>,
-    ) -> Result<SwapExoToUsdcEvent> {
+    ) -> Result<()> {
         swap_exo_to_usdc_all::handler(ctx, slippage_config)
     }
 
@@ -324,14 +341,14 @@ pub mod hylo_exchange {
         ctx: Context<SwapLstToUsdc>,
         amount: u64,
         slippage_config: Option<SlippageConfig>,
-    ) -> Result<SwapLstToUsdcEvent> {
+    ) -> Result<()> {
         swap_lst_to_usdc::handler(ctx, amount, slippage_config)
     }
 
     pub fn swap_lst_to_usdc_all(
         ctx: Context<SwapLstToUsdcAll>,
         slippage_config: Option<SlippageConfig>,
-    ) -> Result<SwapLstToUsdcEvent> {
+    ) -> Result<()> {
         swap_lst_to_usdc_all::handler(ctx, slippage_config)
     }
 
@@ -339,7 +356,7 @@ pub mod hylo_exchange {
         ctx: Context<SwapUsdcToExo>,
         amount: u64,
         slippage_config: Option<SlippageConfig>,
-    ) -> Result<SwapUsdcToExoEvent> {
+    ) -> Result<()> {
         swap_usdc_to_exo::handler(ctx, amount, slippage_config)
     }
 
@@ -347,7 +364,7 @@ pub mod hylo_exchange {
         ctx: Context<SwapUsdcToLst>,
         amount: u64,
         slippage_config: Option<SlippageConfig>,
-    ) -> Result<SwapUsdcToLstEvent> {
+    ) -> Result<()> {
         swap_usdc_to_lst::handler(ctx, amount, slippage_config)
     }
 
@@ -367,11 +384,18 @@ pub mod hylo_exchange {
         unpause_usdc_pair::handler(ctx)
     }
 
-    pub fn update_exo_borrow_rate(
-        ctx: Context<UpdateExoBorrowRate>,
-        new_borrow_rate_config: BorrowRateConfig,
-    ) -> Result<UpdateExoBorrowRateEvent> {
-        update_exo_borrow_rate::handler(ctx, new_borrow_rate_config)
+    pub fn update_exo_borrow_rate_curve(
+        ctx: Context<UpdateExoBorrowRateCurve>,
+        new_curve_config: BorrowRateCurveConfig,
+    ) -> Result<UpdateBorrowRateCurveConfigEvent> {
+        update_exo_borrow_rate_curve::handler(ctx, new_curve_config)
+    }
+
+    pub fn update_exo_borrow_rate_fee(
+        ctx: Context<UpdateExoBorrowRateFee>,
+        new_borrow_rate_fee: UFixValue64,
+    ) -> Result<UpdateFeeEvent> {
+        update_exo_borrow_rate_fee::handler(ctx, new_borrow_rate_fee)
     }
 
     pub fn update_exo_buy_curve(
@@ -472,7 +496,7 @@ pub mod hylo_exchange {
     pub fn update_lst_swap_fee(
         ctx: Context<UpdateLstSwapFee>,
         new_lst_swap_fee: UFixValue64,
-    ) -> Result<UpdateSwapFeeEvent> {
+    ) -> Result<UpdateFeeEvent> {
         update_lst_swap_fee::handler(ctx, new_lst_swap_fee)
     }
 
@@ -511,11 +535,25 @@ pub mod hylo_exchange {
         update_usdc_oracle_interval::handler(ctx, new_oracle_interval_secs)
     }
 
-    pub fn update_usdc_swap_fee(
-        ctx: Context<UpdateUsdcSwapFee>,
-        new_swap_fee: UFixValue64,
-    ) -> Result<UpdateSwapFeeEvent> {
-        update_usdc_swap_fee::handler(ctx, new_swap_fee)
+    pub fn update_par_tolerance(
+        ctx: Context<UpdateParTolerance>,
+        new_par_tolerance: UFixValue64,
+    ) -> Result<UpdateParToleranceEvent> {
+        update_par_tolerance::handler(ctx, new_par_tolerance)
+    }
+
+    pub fn update_usdc_mint_fee(
+        ctx: Context<UpdateUsdcMintFee>,
+        new_mint_fee: UFixValue64,
+    ) -> Result<UpdateFeeEvent> {
+        update_usdc_mint_fee::handler(ctx, new_mint_fee)
+    }
+
+    pub fn update_usdc_redeem_fee(
+        ctx: Context<UpdateUsdcRedeemFee>,
+        new_redeem_fee: UFixValue64,
+    ) -> Result<UpdateFeeEvent> {
+        update_usdc_redeem_fee::handler(ctx, new_redeem_fee)
     }
 
     pub fn update_yield_harvest_config(
