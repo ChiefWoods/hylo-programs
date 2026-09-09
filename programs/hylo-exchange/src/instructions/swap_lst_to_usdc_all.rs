@@ -11,6 +11,7 @@ use crate::{
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct SwapLstToUsdcAll<'info> {
     pub user: Signer<'info>,

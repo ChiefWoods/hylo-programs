@@ -10,6 +10,7 @@ use crate::hylo_exchange::{
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UpdateWithdrawalLimit<'info> {
     pub admin: Signer<'info>,

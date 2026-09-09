@@ -5,6 +5,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct SwapLstToLst<'info> {
     pub user: Signer<'info>,

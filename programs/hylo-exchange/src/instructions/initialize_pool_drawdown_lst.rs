@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 #[allow(unused_imports)]
 use crate::state::*;
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct InitializePoolDrawdownLst<'info> {
     pub admin: Signer<'info>,

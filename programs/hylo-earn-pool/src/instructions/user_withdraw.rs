@@ -10,6 +10,7 @@ use crate::hylo_exchange::{
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UserWithdraw<'info> {
     #[account(mut)]

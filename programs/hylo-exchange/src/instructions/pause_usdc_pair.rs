@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct PauseUsdcPair<'info> {
     pub pause_authority: Signer<'info>,

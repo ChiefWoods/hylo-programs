@@ -5,6 +5,7 @@ use anchor_spl::token::Mint;
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UnpauseExoPair<'info> {
     pub admin: Signer<'info>,

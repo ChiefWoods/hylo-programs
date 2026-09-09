@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UpdateLstBuyCurveConfig<'info> {
     pub admin: Signer<'info>,

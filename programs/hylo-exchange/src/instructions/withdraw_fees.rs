@@ -6,6 +6,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct WithdrawFees<'info> {
     #[account(mut)]

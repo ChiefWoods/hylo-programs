@@ -22,7 +22,7 @@ custom-panic = []
 
 
 [dependencies]
-anchor-lang = { workspace = true }
+anchor-lang = { workspace = true, features = ["event-cpi"] }
 anchor-spl = { workspace = true }
 hylo-fix = { workspace = true }
 

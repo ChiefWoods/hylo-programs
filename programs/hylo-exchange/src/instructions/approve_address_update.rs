@@ -4,6 +4,7 @@ use crate::{error::ErrorCode, program::HyloExchange};
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct ApproveAddressUpdate<'info> {
     pub upgrade_authority: Signer<'info>,

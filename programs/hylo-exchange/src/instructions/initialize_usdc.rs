@@ -7,6 +7,7 @@ use hylo_core::pyth::USDC_USD;
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct InitializeUsdc<'info> {
     #[account(mut)]

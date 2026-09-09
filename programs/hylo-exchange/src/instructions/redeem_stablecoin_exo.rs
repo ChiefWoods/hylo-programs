@@ -6,6 +6,7 @@ use crate::constants::*;
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct RedeemStablecoinExo<'info> {
     #[account(mut)]

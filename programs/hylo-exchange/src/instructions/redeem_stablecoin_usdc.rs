@@ -8,6 +8,7 @@ use crate::constants::*;
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct RedeemStablecoinUsdc<'info> {
     pub user: Signer<'info>,

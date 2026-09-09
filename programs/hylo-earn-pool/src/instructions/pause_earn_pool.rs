@@ -5,6 +5,7 @@ use crate::constants::*;
 use crate::hylo_exchange::{accounts::Hylo, constants::HYLO};
 use crate::{events::*, state::*};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct PauseEarnPool<'info> {
     pub pause_authority: Signer<'info>,
