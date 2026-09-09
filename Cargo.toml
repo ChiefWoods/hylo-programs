@@ -13,6 +13,7 @@ anchor-lang = "0.32.1"
 anchor-spl = "0.32.1"
 hylo-core = "2.5.0"
 hylo-fix = "0.8.0"
+hylo-idl = "2.5.0"
 solana-sdk-ids = "2.2.1"
 
 [profile.release]

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
@@ -12,8 +10,8 @@ use crate::{events::*, state::*};
 pub struct GenesisMintExo<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
-    /// CHECK: Fixed dead account
-    #[account(address = Pubkey::from_str("BzaxDc5L5zvnMfXVjpdynRKrXp8uETaUZW6bYigTM2fe").unwrap())]
+    /// CHECK: Address is pinned to hylo_idl::pda::DEAD.
+    #[account(address = hylo_idl::pda::DEAD)]
     pub dead: UncheckedAccount<'info>,
     #[account(seeds = [HYLO], bump)]
     pub hylo: Account<'info, Hylo>,
