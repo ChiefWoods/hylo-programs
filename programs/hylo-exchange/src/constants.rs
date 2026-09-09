@@ -59,8 +59,28 @@ pub const HYLO_EARN_POOL: Pubkey = crate::hylo_earn_pool::ID;
 pub const METAPLEX_TOKEN_METADATA: Pubkey =
     Pubkey::from_str_const("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
-pub const SANCTUM_SPL_SOL_VALUE_CALCULATOR: Pubkey =
+pub const SPL_STAKE_POOL_PROGRAM: Pubkey =
+    Pubkey::from_str_const("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy");
+
+// single validator
+pub const SANCTUM_SPL_SOL_STAKE_POOL_PROGRAM: Pubkey =
+    Pubkey::from_str_const("SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY");
+
+// multi-validator
+pub const SANCTUM_SPL_MULTI_SOL_STAKE_POOL_PROGRAM: Pubkey =
+    Pubkey::from_str_const("SPMBzsVUuoHA4Jm6KunbsotaahvVikZs1JyTW6iJvbn");
+
+pub const MARINADE_STAKE_POOL_PROGRAM: Pubkey =
+    Pubkey::from_str_const("MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD");
+
+pub const SPL_SOL_VALUE_CALCULATOR: Pubkey =
     Pubkey::from_str_const("sp1V4h2gWorkGhVcazBc22Hfo2f5sd7jcjT4EDPrWFF");
+
+pub const SANCTUM_SPL_SOL_VALUE_CALCULATOR: Pubkey =
+    Pubkey::from_str_const("sspUE1vrh7xRoXxGsg7vR1zde2WdGtJRbyK9uRumBDy");
 
 pub const SANCTUM_SPL_MULTI_SOL_VALUE_CALCULATOR: Pubkey =
     Pubkey::from_str_const("ssmbu3KZxgonUtjEMCKspZzxvUQCxAFnyh1rcHUeEDo");
+
+pub const MARINADE_SOL_VALUE_CALCULATOR: Pubkey =
+    Pubkey::from_str_const("mare3SCyfZkAndpBRBeonETmkCCB3TJTTrz8ZN2dnhP");
