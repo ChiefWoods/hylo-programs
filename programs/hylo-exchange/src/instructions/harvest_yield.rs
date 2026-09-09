@@ -57,7 +57,10 @@ pub struct HarvestYield<'info> {
     /// CHECK: Hylo Earn Pool program address is constrained below.
     #[account(address = HYLO_EARN_POOL)]
     pub hylo_earn_pool: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: relations=hylo.
+    /// CHECK: Validated owner.
+    #[account(
+        owner = solana_sdk_ids::address_lookup_table::ID
+    )]
     pub lst_registry: UncheckedAccount<'info>,
     /// CHECK: Address Lookup Table program ID is constrained below.
     #[account(address = solana_sdk_ids::address_lookup_table::ID)]

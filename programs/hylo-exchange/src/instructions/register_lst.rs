@@ -53,8 +53,11 @@ pub struct RegisterLst<'info> {
     )]
     pub lst_vault: Account<'info, TokenAccount>,
     pub lst_mint: Account<'info, Mint>,
-    /// CHECK: IDL metadata: writable; relations=hylo.
-    #[account(mut)]
+    /// CHECK: Validated owner.
+    #[account(
+        mut,
+        owner = solana_sdk_ids::address_lookup_table::ID
+    )]
     pub lst_registry: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub lst_stake_pool_state: UncheckedAccount<'info>,
@@ -74,7 +77,7 @@ pub struct RegisterLst<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<RegisterLst>, rebalance_fee: UFixValue64) -> Result<RegisterLstEvent> {
-    let _ = (ctx, rebalance_fee);
+pub fn handler(_ctx: Context<RegisterLst>, rebalance_fee: UFixValue64) -> Result<RegisterLstEvent> {
+    let _ = rebalance_fee;
     todo!()
 }

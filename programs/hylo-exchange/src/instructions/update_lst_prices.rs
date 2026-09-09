@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::constants::*;
+use anchor_lang::prelude::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -15,15 +15,17 @@ pub struct UpdateLstPrices<'info> {
         has_one = lst_registry,
     )]
     pub hylo: Account<'info, Hylo>,
-    /// CHECK: IDL metadata: writable; relations=hylo.
-    #[account(mut)]
+    /// CHECK: Validated owner.
+    #[account(
+        mut,
+        owner = solana_sdk_ids::address_lookup_table::ID
+    )]
     pub lst_registry: UncheckedAccount<'info>,
     /// CHECK: Address Lookup Table program ID is constrained below.
     #[account(address = solana_sdk_ids::address_lookup_table::ID)]
     pub lut_program: UncheckedAccount<'info>,
 }
 
-pub fn handler(ctx: Context<UpdateLstPrices>) -> Result<UpdateLstPricesEvent> {
-    let _ = ctx;
+pub fn handler(_ctx: Context<UpdateLstPrices>) -> Result<UpdateLstPricesEvent> {
     todo!()
 }

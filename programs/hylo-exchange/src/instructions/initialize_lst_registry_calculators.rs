@@ -18,8 +18,11 @@ pub struct InitializeLstRegistryCalculators<'info> {
     /// CHECK: PDA is constrained by its fixed seed below.
     #[account(seeds = [LST_REGISTRY_AUTH], bump = hylo.registry_auth_bump)]
     pub lst_registry_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; relations=hylo.
-    #[account(mut)]
+    /// CHECK: Validated owner.
+    #[account(
+        mut,
+        owner = solana_sdk_ids::address_lookup_table::ID
+    )]
     pub lst_registry: UncheckedAccount<'info>,
     /// CHECK: Address Lookup Table program ID is constrained below.
     #[account(address = solana_sdk_ids::address_lookup_table::ID)]
@@ -27,7 +30,6 @@ pub struct InitializeLstRegistryCalculators<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<InitializeLstRegistryCalculators>) -> Result<()> {
-    let _ = ctx;
+pub fn handler(_ctx: Context<InitializeLstRegistryCalculators>) -> Result<()> {
     todo!()
 }
