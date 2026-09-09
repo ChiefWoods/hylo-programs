@@ -75,9 +75,13 @@ pub struct SwapExoToUsdcAll<'info> {
         associated_token::token_program = token_program,
     )]
     pub stablecoin_pool: Account<'info, TokenAccount>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_collateral_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = collateral_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_collateral_ta: Account<'info, TokenAccount>,
     #[account(
         mut,
         token::mint = usdc_mint,
