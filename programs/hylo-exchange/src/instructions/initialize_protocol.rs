@@ -11,7 +11,7 @@ pub struct InitializeProtocol<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     pub upgrade_authority: Signer<'info>,
-    #[account(mut, seeds = [HYLO], bump)]
+    #[account(init, payer = admin, space = Hylo::DISCRIMINATOR.len() + Hylo::INIT_SPACE, seeds = [HYLO], bump)]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: IDL metadata: no additional constraints.
     pub treasury: UncheckedAccount<'info>,

@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use super::*;
 
 #[account]
+#[derive(InitSpace)]
 pub struct Hylo {
     pub admin: Pubkey,
     pub treasury: Pubkey,

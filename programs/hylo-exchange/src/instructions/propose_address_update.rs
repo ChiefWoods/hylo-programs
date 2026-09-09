@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 use crate::{events::*, state::*};
 
 #[derive(Accounts)]
+#[instruction(address_field: AddressField)]
 pub struct ProposeAddressUpdate<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -14,7 +15,13 @@ pub struct ProposeAddressUpdate<'info> {
         has_one = admin,
     )]
     pub hylo: Account<'info, Hylo>,
-    #[account(mut)]
+    #[account(
+        init,
+        payer = admin,
+        space = AddressUpdateProposal::DISCRIMINATOR.len() + AddressUpdateProposal::INIT_SPACE,
+        seeds = [ADDRESS_UPDATE_PROPOSAL, &[address_field.clone() as u8]],
+        bump,
+    )]
     pub proposal: Account<'info, AddressUpdateProposal>,
     /// CHECK: IDL metadata: no additional constraints.
     pub new_address: UncheckedAccount<'info>,

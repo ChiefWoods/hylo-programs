@@ -17,7 +17,13 @@ pub struct InitializeUsdc<'info> {
         has_one = admin,
     )]
     pub hylo: Account<'info, Hylo>,
-    #[account(mut, seeds = [USDC_PAIR], bump)]
+    #[account(
+        init,
+        payer = admin,
+        space = UsdcPair::DISCRIMINATOR.len() + UsdcPair::INIT_SPACE,
+        seeds = [USDC_PAIR],
+        bump,
+    )]
     pub usdc_pair: Account<'info, UsdcPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(

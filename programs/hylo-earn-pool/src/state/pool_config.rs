@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use super::*;
 
 #[account]
+#[derive(InitSpace)]
 pub struct PoolConfig {
     pub _dead_admin: Pubkey,
     pub pool_auth_bump: u8,

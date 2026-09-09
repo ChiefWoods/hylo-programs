@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use super::*;
 
 #[account]
+#[derive(InitSpace)]
 pub struct UsdcPair {
     pub vault_auth_bump: u8,
     pub fee_auth_bump: u8,

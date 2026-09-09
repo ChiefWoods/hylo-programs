@@ -17,7 +17,9 @@ pub struct RegisterExo<'info> {
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(
-        mut,
+        init,
+        payer = admin,
+        space = ExoPair::DISCRIMINATOR.len() + ExoPair::INIT_SPACE,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
     )]

@@ -20,7 +20,9 @@ pub struct RegisterLst<'info> {
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(
-        mut,
+        init,
+        payer = admin,
+        space = LstHeader::DISCRIMINATOR.len() + LstHeader::INIT_SPACE,
         seeds = [LST_HEADER, lst_mint.key().as_ref()],
         bump,
     )]

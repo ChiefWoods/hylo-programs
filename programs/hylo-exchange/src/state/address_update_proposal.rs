@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use super::*;
 
 #[account]
+#[derive(InitSpace)]
 pub struct AddressUpdateProposal {
     pub address_field: AddressField,
     pub new_address: Pubkey,

@@ -17,7 +17,13 @@ pub struct InitializeEarnPool<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     pub upgrade_authority: Signer<'info>,
-    #[account(mut, seeds = [POOL_CONFIG], bump)]
+    #[account(
+        init,
+        payer = admin,
+        space = PoolConfig::DISCRIMINATOR.len() + PoolConfig::INIT_SPACE,
+        seeds = [POOL_CONFIG],
+        bump,
+    )]
     pub pool_config: Account<'info, PoolConfig>,
     #[account(
         seeds = [&HYLO],

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 pub use fix::prelude::UFixValue64;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
 pub struct DepositLimiter {
     pub limit: UFixValue64,
 }
@@ -65,13 +65,13 @@ pub struct TotalSolCache {
 }
 
 /// Simple counter representing the supply of a "virtual" stablecoin.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
 pub struct VirtualStablecoin {
     pub supply: UFixValue64,
 }
 
 /// Per-epoch withdrawal window, reset lazily on epoch rollover.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
 pub struct WithdrawalLimiter {
     pub limit: UFixValue64,
     pub withdrawal_ledger: VirtualStablecoin,

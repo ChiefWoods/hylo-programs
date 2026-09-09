@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use super::*;
 
 #[account]
+#[derive(InitSpace)]
 pub struct ExoPair {
     pub collateral_mint: Pubkey,
     pub levercoin_mint_bump: u8,
