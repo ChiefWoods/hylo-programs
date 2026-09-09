@@ -7,7 +7,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::state::*;
-use hylo_exchange::constants::{HYLO, HYUSD};
+use crate::hylo_exchange::constants::{HYLO, HYUSD};
 
 #[derive(Accounts)]
 pub struct InitializeEarnPool<'info> {
@@ -17,9 +17,9 @@ pub struct InitializeEarnPool<'info> {
     #[account(mut, seeds = [POOL_CONFIG], bump)]
     pub pool_config: Account<'info, PoolConfig>,
     #[account(
-        seeds = [HYLO],
+        seeds = [&HYLO],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: PDA is constrained by its fixed seed below.
@@ -33,9 +33,9 @@ pub struct InitializeEarnPool<'info> {
     )]
     pub stablecoin_pool: Account<'info, TokenAccount>,
     #[account(
-        seeds = [HYUSD],
+        seeds = [&HYUSD],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
     pub associated_token_program: Program<'info, AssociatedToken>,

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token};
 
@@ -7,7 +5,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::state::*;
-use hylo_exchange::constants::HYLO;
+use crate::hylo_exchange::constants::HYLO;
 
 #[derive(Accounts)]
 pub struct InitializeLpTokenMint<'info> {
@@ -16,9 +14,9 @@ pub struct InitializeLpTokenMint<'info> {
     #[account(mut, seeds = [POOL_CONFIG], bump)]
     pub pool_config: Account<'info, PoolConfig>,
     #[account(
-        seeds = [HYLO],
+        seeds = [&HYLO],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: PDA is constrained by its seeds below.

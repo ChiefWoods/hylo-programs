@@ -25,7 +25,6 @@ custom-panic = []
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
 hylo-fix = { workspace = true }
-hylo-exchange = { path = "../hylo-exchange", features = ["cpi"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

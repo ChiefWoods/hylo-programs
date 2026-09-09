@@ -5,15 +5,15 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
-use hylo_exchange::constants::{HYLO, HYUSD};
+use crate::hylo_exchange::constants::{HYLO, HYUSD};
 
 #[derive(Accounts)]
 pub struct UpdateWithdrawalLimit<'info> {
     pub admin: Signer<'info>,
     #[account(
-        seeds = [HYLO],
+        seeds = [&HYLO],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(mut, seeds = [POOL_CONFIG], bump)]
@@ -28,9 +28,9 @@ pub struct UpdateWithdrawalLimit<'info> {
     )]
     pub stablecoin_pool: Account<'info, TokenAccount>,
     #[account(
-        seeds = [HYUSD],
+        seeds = [&HYUSD],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,

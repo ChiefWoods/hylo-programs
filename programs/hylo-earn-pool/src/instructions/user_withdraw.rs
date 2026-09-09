@@ -5,7 +5,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
-use hylo_exchange::constants::{FEE_AUTH, HYLO, HYUSD};
+use crate::hylo_exchange::constants::{FEE_AUTH, HYLO, HYUSD};
 
 #[derive(Accounts)]
 pub struct UserWithdraw<'info> {
@@ -14,15 +14,15 @@ pub struct UserWithdraw<'info> {
     #[account(mut, seeds = [POOL_CONFIG], bump)]
     pub pool_config: Account<'info, PoolConfig>,
     #[account(
-        seeds = [HYLO],
+        seeds = [&HYLO],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(
-        seeds = [HYUSD],
+        seeds = [&HYUSD],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
     #[account(
@@ -34,9 +34,9 @@ pub struct UserWithdraw<'info> {
     pub user_stablecoin_ta: Account<'info, TokenAccount>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
-        seeds = [FEE_AUTH, stablecoin_mint.key().as_ref()],
+        seeds = [&FEE_AUTH, stablecoin_mint.key().as_ref()],
         bump,
-        seeds::program = hylo_exchange::ID,
+        seeds::program = crate::hylo_exchange::ID,
     )]
     pub fee_auth: UncheckedAccount<'info>,
     #[account(

@@ -5,7 +5,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
-use hylo_exchange::constants::{HYLO, HYUSD};
+use crate::hylo_exchange::constants::{HYLO, HYUSD};
 
 #[derive(Accounts)]
 pub struct UserDeposit<'info> {
@@ -14,15 +14,15 @@ pub struct UserDeposit<'info> {
     #[account(seeds = [POOL_CONFIG], bump)]
     pub pool_config: Account<'info, PoolConfig>,
     #[account(
-        seeds = [HYLO],
+        seeds = [&HYLO],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(
-        seeds = [HYUSD],
+        seeds = [&HYUSD],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
     #[account(

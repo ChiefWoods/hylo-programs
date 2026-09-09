@@ -5,16 +5,16 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::state::*;
-use hylo_exchange::constants::{HYLO, XSOL};
+use crate::hylo_exchange::constants::{HYLO, XSOL};
 
 #[derive(Accounts)]
 pub struct DeprecateLevercoinPool<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     #[account(
-        seeds = [HYLO],
+        seeds = [&HYLO],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(seeds = [POOL_CONFIG], bump)]
@@ -37,9 +37,9 @@ pub struct DeprecateLevercoinPool<'info> {
     )]
     pub admin_levercoin_ta: Account<'info, TokenAccount>,
     #[account(
-        seeds = [XSOL],
+        seeds = [&XSOL],
         bump,
-        seeds::program = hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID
     )]
     pub levercoin_mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,

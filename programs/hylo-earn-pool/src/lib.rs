@@ -13,6 +13,7 @@ pub use instructions::*;
 pub use state::*;
 
 declare_id!("HysTabVUfmQBFcmzu1ctRd1Y1fxd66RBpboy1bmtDSQQ");
+declare_program!(hylo_exchange);
 
 #[program]
 pub mod hylo_earn_pool {
