@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token};
-use std::str::FromStr;
 
 use crate::constants::*;
 
