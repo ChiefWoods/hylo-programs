@@ -16,6 +16,7 @@ hylo-fix = "0.8.0"
 hylo-idl = "2.5.0"
 solana-sdk-ids = "2.2.1"
 solana-address-lookup-table-interface = "2.2.2"
+inf1-svc-core = { git = "https://github.com/igneous-labs/inf-1.5.git" }
 
 [profile.release]
 overflow-checks = true

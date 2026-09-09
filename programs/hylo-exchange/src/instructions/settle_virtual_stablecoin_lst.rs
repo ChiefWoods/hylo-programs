@@ -1,12 +1,16 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use fix::prelude::{CheckedSub, UFix64, N6};
+use hylo_core::exchange_context::{ExchangeContext, LstExchangeContext};
 use hylo_core::pyth::SOL_USD;
+use hylo_core::virtual_stablecoin::SUPPLY_FLOOR;
 
-use crate::{
-    constants::*,
-    hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG},
-};
+use crate::constants::*;
+use crate::error::ErrorCode;
+use crate::hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG};
+use crate::instructions::stablecoin_ops::{absorb_loss, drawdown_repay, mint_stablecoin};
+use crate::oracle::load_price_update;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -61,5 +65,96 @@ pub fn handler(
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
-    todo!()
+
+    let clock = Clock::get()?;
+    let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
+    let exchange = LstExchangeContext::load(
+        clock,
+        &ctx.accounts.hylo.total_sol_cache,
+        ctx.accounts.hylo.stablecoin_mint_threshold()?,
+        ctx.accounts.hylo.oracle_config()?,
+        ctx.accounts.hylo.levercoin_fees,
+        &price_update,
+        ctx.accounts.hylo.virtual_stablecoin,
+        None,
+        ctx.accounts.hylo.lst_sell_curve_config,
+        ctx.accounts.hylo.lst_buy_curve_config,
+    )?;
+
+    let tvl = exchange
+        .total_value_locked()?
+        .checked_convert::<N6>()
+        .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinConversion))?;
+    let virtual_supply = ctx.accounts.hylo.virtual_stablecoin.supply()?;
+
+    let (stablecoin_burned, stablecoin_minted) = if tvl > virtual_supply {
+        let surplus = tvl
+            .checked_sub(&virtual_supply)
+            .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinUnderflow))?;
+        require!(surplus > UFix64::zero(), ErrorCode::SettleVirtualStablecoinNoop);
+        mint_stablecoin(
+            ctx.accounts.token_program.to_account_info(),
+            ctx.accounts.stablecoin_mint.to_account_info(),
+            ctx.accounts.stablecoin_pool.to_account_info(),
+            ctx.accounts.stablecoin_mint_auth.to_account_info(),
+            ctx.accounts.stablecoin_mint.key(),
+            ctx.accounts.hylo.stablecoin_auth_bump,
+            surplus.bits,
+        )?;
+        ctx.accounts.hylo.virtual_stablecoin.mint(surplus)?;
+        drawdown_repay(&mut ctx.accounts.hylo.pool_drawdown, surplus)?;
+        (UFix64::zero(), surplus)
+    } else if virtual_supply > tvl {
+        let overhang = virtual_supply
+            .checked_sub(&tvl)
+            .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinUnderflow))?;
+        let max_burn = virtual_supply
+            .checked_sub(&SUPPLY_FLOOR)
+            .unwrap_or_else(UFix64::zero);
+        let pool = UFix64::<N6>::new(ctx.accounts.stablecoin_pool.amount);
+        let burned = overhang.min(max_burn).min(pool);
+        require!(burned > UFix64::zero(), ErrorCode::SettleVirtualStablecoinNoop);
+        absorb_loss(
+            ctx.accounts.earn_pool.to_account_info(),
+            ctx.accounts.settlement_auth.to_account_info(),
+            ctx.accounts.hylo.to_account_info(),
+            ctx.accounts.pool_config.to_account_info(),
+            ctx.accounts.pool_auth.to_account_info(),
+            ctx.accounts.stablecoin_pool.to_account_info(),
+            ctx.accounts.stablecoin_mint.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
+            ctx.bumps.settlement_auth,
+            burned.bits,
+        )?;
+        ctx.accounts
+            .hylo
+            .virtual_stablecoin
+            .burn_limited(burned, SUPPLY_FLOOR)?;
+        ctx.accounts.hylo.pool_drawdown.drawdown(burned)?;
+        (burned, UFix64::zero())
+    } else {
+        return err!(ErrorCode::SettleVirtualStablecoinNoop);
+    };
+
+    let pool_balance = if stablecoin_minted > UFix64::zero() {
+        ctx.accounts
+            .stablecoin_pool
+            .amount
+            .saturating_add(stablecoin_minted.bits)
+    } else {
+        ctx.accounts
+            .stablecoin_pool
+            .amount
+            .saturating_sub(stablecoin_burned.bits)
+    };
+
+    let event = SettleVirtualStablecoinLstEvent {
+        stablecoin_burned: stablecoin_burned.into(),
+        stablecoin_minted: stablecoin_minted.into(),
+        virtual_stablecoin_supply: ctx.accounts.hylo.virtual_stablecoin.supply()?.into(),
+        pool_drawdown_outstanding: ctx.accounts.hylo.pool_drawdown.outstanding()?.into(),
+        pool_balance: UFix64::<N6>::new(pool_balance).into(),
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

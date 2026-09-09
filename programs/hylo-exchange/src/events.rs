@@ -78,6 +78,7 @@ pub struct GenesisMintExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct HarvestBorrowRateEvent {
     pub collateral_mint: Pubkey,
     pub levercoin_market_cap: UFixValue64,
@@ -89,6 +90,7 @@ pub struct HarvestBorrowRateEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct HarvestYieldEvent {
     pub total_sol_harvested: UFixValue64,
     pub fees_extracted: UFixValue64,
@@ -278,6 +280,7 @@ pub struct SettleRebalancePnlLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SettleVirtualStablecoinExoEvent {
     pub collateral_mint: Pubkey,
     pub stablecoin_burned: UFixValue64,
@@ -288,6 +291,7 @@ pub struct SettleVirtualStablecoinExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SettleVirtualStablecoinLstEvent {
     pub stablecoin_burned: UFixValue64,
     pub stablecoin_minted: UFixValue64,
@@ -297,6 +301,7 @@ pub struct SettleVirtualStablecoinLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SettleVirtualStablecoinUsdcEvent {
     pub stablecoin_minted: UFixValue64,
     pub virtual_stablecoin_supply: UFixValue64,
@@ -378,6 +383,7 @@ pub struct UpdateLevercoinMarketCapLimitEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateLstPricesEvent {
     pub updated_mints: Vec<Pubkey>,
     pub new_total_sol: UFixValue64,

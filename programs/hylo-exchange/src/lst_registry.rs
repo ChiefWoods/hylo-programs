@@ -1,10 +1,16 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program::invoke_signed;
+use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
+use anchor_lang::solana_program::program::{get_return_data, invoke, invoke_signed};
+use fix::prelude::{UFix64, N9};
 use solana_address_lookup_table_interface::instruction as alt_ix;
 use solana_address_lookup_table_interface::state::AddressLookupTable;
 
 use crate::constants::*;
 use crate::error::ErrorCode;
+use crate::state::{LstHeader, LstStakePoolProgram};
+use anchor_spl::token::TokenAccount;
+use inf1_svc_core::instructions::lst_to_sol::LstToSolIxData;
+use inf1_svc_core::instructions::{parse_retdata, IX_RETDATA_LEN};
 
 pub fn calculator_preamble() -> [Pubkey; LST_REGISTRY_CALCULATOR_PREAMBLE_LEN] {
     [
@@ -81,6 +87,134 @@ pub fn extend_lookup_table<'info>(
         system_program_ai,
         registry_auth_bump,
     )
+}
+
+/// 1 LST in native 9-decimal atoms, used as the Sanctum `LstToSol` quote size.
+pub const LST_TO_SOL_AMOUNT: u64 = 1_000_000_000;
+
+pub fn remaining_matches_table(
+    registry_data: &[u8],
+    remaining: &[AccountInfo],
+) -> Result<()> {
+    let table = load_table(registry_data)?;
+    require!(
+        remaining.len() == table.addresses.len(),
+        ErrorCode::LstRegistryLookupTableInvalid
+    );
+    for (account, address) in remaining.iter().zip(table.addresses.iter()) {
+        require_keys_eq!(
+            *account.key,
+            *address,
+            ErrorCode::LstRegistryLookupTableInvalid
+        );
+    }
+    require!(
+        table.addresses.len() >= LST_REGISTRY_CALCULATOR_PREAMBLE_LEN,
+        ErrorCode::LstRegistryPreamble
+    );
+    let blocks_len = table.addresses.len() - LST_REGISTRY_CALCULATOR_PREAMBLE_LEN;
+    require!(blocks_len > 0, ErrorCode::LstRegistryEmpty);
+    require!(
+        blocks_len % LST_REGISTRY_BLOCK_LEN == 0,
+        ErrorCode::LstRegistryLookupTableInvalid
+    );
+    Ok(())
+}
+
+pub fn calculator_accounts<'a, 'info>(
+    preamble: &'a [AccountInfo<'info>],
+    stake_program: &LstStakePoolProgram,
+) -> Result<[&'a AccountInfo<'info>; 4]> {
+    require!(
+        preamble.len() >= LST_REGISTRY_CALCULATOR_PREAMBLE_LEN,
+        ErrorCode::LstRegistryPreamble
+    );
+    let offset = stake_program.preamble_offset();
+    let calculator = &preamble[offset];
+    let calculator_state = &preamble[offset + 1];
+    let program = &preamble[offset + 2];
+    let program_data = &preamble[offset + 3];
+    require_keys_eq!(
+        *calculator.key,
+        stake_program.calculator(),
+        ErrorCode::LstContextInvalid
+    );
+    require_keys_eq!(
+        *program.key,
+        stake_program.program_id(),
+        ErrorCode::LstContextInvalid
+    );
+    Ok([calculator, calculator_state, program, program_data])
+}
+
+/// Quotes 1 LST in SOL via the Sanctum calculator. Return data is
+/// `(min_lamports, max_lamports)`; the conservative lower bound is the price.
+pub fn lst_to_sol_price<'info>(
+    calculator: AccountInfo<'info>,
+    mint: AccountInfo<'info>,
+    calculator_state: AccountInfo<'info>,
+    pool_state: AccountInfo<'info>,
+    stake_program: AccountInfo<'info>,
+    stake_program_data: AccountInfo<'info>,
+) -> Result<UFix64<N9>> {
+    let calculator_key = *calculator.key;
+    let ix = Instruction {
+        program_id: calculator_key,
+        accounts: vec![
+            AccountMeta::new_readonly(*mint.key, false),
+            AccountMeta::new_readonly(*calculator_state.key, false),
+            AccountMeta::new_readonly(*pool_state.key, false),
+            AccountMeta::new_readonly(*stake_program.key, false),
+            AccountMeta::new_readonly(*stake_program_data.key, false),
+        ],
+        data: LstToSolIxData::new(LST_TO_SOL_AMOUNT).as_buf().to_vec(),
+    };
+    invoke(
+        &ix,
+        &[
+            mint,
+            calculator_state,
+            pool_state,
+            stake_program,
+            stake_program_data,
+        ],
+    )
+    .map_err(|_| error!(ErrorCode::SanctumCpi))?;
+    let (returned_program, returned) =
+        get_return_data().ok_or_else(|| error!(ErrorCode::SanctumCpi))?;
+    require_keys_eq!(returned_program, calculator_key, ErrorCode::SanctumCpi);
+    require!(returned.len() >= IX_RETDATA_LEN, ErrorCode::SanctumCpi);
+    let retdata: [u8; IX_RETDATA_LEN] = returned[..IX_RETDATA_LEN]
+        .try_into()
+        .map_err(|_| error!(ErrorCode::SanctumCpi))?;
+    Ok(UFix64::new(*parse_retdata(&retdata).start()))
+}
+
+pub fn load_header(info: &AccountInfo) -> Result<LstHeader> {
+    require_keys_eq!(*info.owner, crate::ID, ErrorCode::LstBlockInvalid);
+    let data = info.try_borrow_data()?;
+    let mut slice: &[u8] = &data;
+    LstHeader::try_deserialize(&mut slice).map_err(|_| error!(ErrorCode::LstBlockInvalid))
+}
+
+pub fn save_header(info: &AccountInfo, header: &LstHeader) -> Result<()> {
+    require!(info.is_writable, ErrorCode::LstBlockInvalid);
+    let mut data = info.try_borrow_mut_data()?;
+    let mut slice: &mut [u8] = &mut data;
+    header
+        .try_serialize(&mut slice)
+        .map_err(|_| error!(ErrorCode::LstBlockInvalid))
+}
+
+pub fn load_vault(info: &AccountInfo) -> Result<TokenAccount> {
+    require_keys_eq!(
+        *info.owner,
+        anchor_spl::token::ID,
+        ErrorCode::LstBlockInvalid
+    );
+    let data = info.try_borrow_data()?;
+    let mut slice: &[u8] = &data;
+    TokenAccount::try_deserialize(&mut slice).map_err(|_| error!(ErrorCode::LstBlockInvalid))
 }
 
 fn invoke_lut<'info>(

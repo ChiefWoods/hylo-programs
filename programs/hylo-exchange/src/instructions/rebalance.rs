@@ -19,6 +19,7 @@ use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use crate::constants::*;
 use crate::error::ErrorCode;
 use crate::hylo_earn_pool::{self, accounts::PoolConfig};
+use crate::oracle::{load_price_update, oracle_event};
 use crate::{events::*, state::*};
 
 pub struct LstUsdcAccounts<'a, 'info> {
@@ -76,20 +77,7 @@ pub struct ExoUsdcAccounts<'a, 'info> {
     pub settlement_auth_bump: u8,
 }
 
-fn load_price_update(
-    account: &UncheckedAccount,
-    expected_feed_id: &[u8; 32],
-) -> Result<PriceUpdateV2> {
-    let mut oracle_data: &[u8] = &account.try_borrow_data()?;
-    let price_update = PriceUpdateV2::try_deserialize(&mut oracle_data)
-        .map_err(|_| ProgramError::InvalidAccountData)?;
-    if price_update.price_message.feed_id != *expected_feed_id {
-        return Err(ProgramError::InvalidAccountData.into());
-    }
-    Ok(price_update)
-}
-
-fn assert_usdc_par(
+pub(crate) fn assert_usdc_par(
     clock: &Clock,
     usdc_pair: &UsdcPair,
     feed: &UncheckedAccount,
@@ -98,13 +86,6 @@ fn assert_usdc_par(
     let oracle_price = query_pyth_oracle(clock, &price_update, usdc_pair.oracle_config()?)?;
     usdc_pair.par_tolerance.validate_spot(oracle_price.spot)?;
     Ok(oracle_price)
-}
-
-fn usdc_oracle_event(price: OraclePrice) -> OraclePriceEvent {
-    OraclePriceEvent {
-        spot: price.spot.into(),
-        conf: price.conf.into(),
-    }
 }
 
 fn usdc_amount_n9(usdc: UFix64<N6>) -> Result<UFix64<N9>> {
@@ -421,7 +402,7 @@ pub fn swap_lst_to_usdc(
             lst_deposited: requested.into(),
             sol_rebalance_usd_price: lst_sol_price.into(),
             usdc_withdrawn: usdc_out.into(),
-            usdc_usd_price: usdc_oracle_event(usdc_oracle),
+            usdc_usd_price: oracle_event(usdc_oracle),
         },
         SettleRebalancePnlLstEvent {
             pnl: pnl.into(),
@@ -540,7 +521,7 @@ pub fn swap_usdc_to_lst(
         SwapUsdcToLstEvent {
             lst_mint: a.lst_mint.key(),
             usdc_deposited: usdc_amount_n9(usdc_in)?.into(),
-            usdc_usd_price: usdc_oracle_event(usdc_oracle),
+            usdc_usd_price: oracle_event(usdc_oracle),
             lst_withdrawn: lst_out.into(),
             sol_rebalance_usd_price: lst_sol_price.into(),
         },
@@ -724,7 +705,7 @@ pub fn swap_exo_to_usdc(
             collateral_deposited: requested.into(),
             collateral_usd_price: curve_price.into(),
             usdc_withdrawn: usdc_out.into(),
-            usdc_usd_price: usdc_oracle_event(usdc_oracle),
+            usdc_usd_price: oracle_event(usdc_oracle),
         },
         SettleRebalancePnlExoEvent {
             collateral_mint: a.collateral_mint.key(),
@@ -821,7 +802,7 @@ pub fn swap_usdc_to_exo(
         SwapUsdcToExoEvent {
             collateral_mint: a.collateral_mint.key(),
             usdc_deposited: usdc_amount_n9(usdc_in)?.into(),
-            usdc_usd_price: usdc_oracle_event(usdc_oracle),
+            usdc_usd_price: oracle_event(usdc_oracle),
             collateral_withdrawn: collateral_out_n9.into(),
             collateral_usd_price: curve_price.into(),
         },

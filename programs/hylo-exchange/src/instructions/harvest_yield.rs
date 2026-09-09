@@ -1,9 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use hylo_core::pyth::SOL_USD;
+use fix::prelude::{CheckedAdd, CheckedSub, MulDiv, UFix64, N6, N9};
+use hylo_core::pyth::{query_pyth_oracle, SOL_USD};
 
 use crate::constants::*;
+use crate::error::ErrorCode;
+use crate::instructions::stablecoin_ops::{drawdown_repay, mint_stablecoin};
+use crate::lst_registry;
+use crate::oracle::{load_price_update, oracle_event};
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -74,5 +79,125 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
-    todo!()
+
+    let clock = Clock::get()?;
+    let epoch = clock.epoch;
+    require!(
+        ctx.accounts.hylo.yield_harvest_cache.is_stale(epoch),
+        ErrorCode::YieldHarvestAlreadyRun
+    );
+    ctx.accounts.hylo.total_sol_cache.get_validated(epoch)?;
+
+    lst_registry::remaining_matches_table(
+        &ctx.accounts.lst_registry.try_borrow_data()?,
+        ctx.remaining_accounts,
+    )?;
+
+    let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
+    let sol_usd = query_pyth_oracle(&clock, &price_update, ctx.accounts.hylo.oracle_config()?)?;
+
+    let blocks = &ctx.remaining_accounts[LST_REGISTRY_CALCULATOR_PREAMBLE_LEN..];
+    let mut total_sol_harvested = UFix64::<N9>::zero();
+
+    for block in blocks.chunks_exact(LST_REGISTRY_BLOCK_LEN) {
+        let header_info = &block[0];
+        require!(header_info.is_writable, ErrorCode::LstBlockInvalid);
+        let mut header = lst_registry::load_header(header_info)?;
+        let mint_info = &block[1];
+        let vault = lst_registry::load_vault(&block[2])?;
+        let pool_state_info = &block[3];
+
+        require_keys_eq!(header.mint, *mint_info.key, ErrorCode::LstBlockInvalid);
+        require_keys_eq!(header.vault, *block[2].key, ErrorCode::LstBlockInvalid);
+        require_keys_eq!(
+            header.pool_state,
+            *pool_state_info.key,
+            ErrorCode::LstBlockInvalid
+        );
+        require!(
+            header.price_sol.epoch == epoch,
+            ErrorCode::LstPriceOutdated
+        );
+
+        if header.prev_price_sol.epoch < header.price_sol.epoch {
+            let delta = header
+                .price_sol
+                .checked_delta(&header.prev_price_sol)
+                .map_err(|_| error!(ErrorCode::LstPriceDelta))?;
+            let vault_amount = UFix64::<N9>::new(vault.amount);
+            let sol_delta = delta
+                .mul_div_floor(vault_amount, UFix64::one())
+                .ok_or_else(|| error!(ErrorCode::LstSolAppreciation))?;
+            total_sol_harvested = total_sol_harvested
+                .checked_add(&sol_delta)
+                .ok_or_else(|| error!(ErrorCode::LstAdditionOverflow))?;
+        }
+
+        header.last_yield_harvest_epoch = epoch;
+        lst_registry::save_header(header_info, &header)?;
+    }
+
+    let usd_yield_n9 = total_sol_harvested
+        .mul_div_floor(sol_usd.spot, UFix64::one())
+        .ok_or_else(|| error!(ErrorCode::LstSolAppreciation))?;
+    let usd_yield: UFix64<N6> = usd_yield_n9
+        .checked_convert()
+        .ok_or_else(|| error!(ErrorCode::TokenAmountPrecisionError))?;
+
+    let allocated = ctx.accounts.hylo.yield_harvest_config.apply_allocation(usd_yield)?;
+    let extract = ctx.accounts.hylo.yield_harvest_config.apply_fee(allocated)?;
+
+    mint_stablecoin(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.stablecoin_mint.to_account_info(),
+        ctx.accounts.stablecoin_fee_vault.to_account_info(),
+        ctx.accounts.stablecoin_auth.to_account_info(),
+        ctx.accounts.stablecoin_mint.key(),
+        ctx.accounts.hylo.stablecoin_auth_bump,
+        extract.fees_extracted.bits,
+    )?;
+    mint_stablecoin(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.stablecoin_mint.to_account_info(),
+        ctx.accounts.stablecoin_pool.to_account_info(),
+        ctx.accounts.stablecoin_auth.to_account_info(),
+        ctx.accounts.stablecoin_mint.key(),
+        ctx.accounts.hylo.stablecoin_auth_bump,
+        extract.amount_remaining.bits,
+    )?;
+
+    let minted = extract
+        .fees_extracted
+        .checked_add(&extract.amount_remaining)
+        .ok_or_else(|| error!(ErrorCode::LstAdditionOverflow))?;
+    if minted > UFix64::zero() {
+        ctx.accounts.hylo.virtual_stablecoin.mint(minted)?;
+    }
+    let pool_drawdown_repaid =
+        drawdown_repay(&mut ctx.accounts.hylo.pool_drawdown, extract.amount_remaining)?;
+    let net_to_pool = extract
+        .amount_remaining
+        .checked_sub(&pool_drawdown_repaid)
+        .unwrap_or_else(UFix64::zero);
+
+    let pool_balance = UFix64::<N6>::new(
+        ctx.accounts
+            .stablecoin_pool
+            .amount
+            .saturating_add(extract.amount_remaining.bits),
+    );
+    ctx.accounts
+        .hylo
+        .yield_harvest_cache
+        .update(pool_balance, net_to_pool, epoch)?;
+
+    let event = HarvestYieldEvent {
+        total_sol_harvested: total_sol_harvested.into(),
+        fees_extracted: extract.fees_extracted.into(),
+        token_to_pool: extract.amount_remaining.into(),
+        pool_drawdown_repaid: pool_drawdown_repaid.into(),
+        sol_usd_price: oracle_event(sol_usd),
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

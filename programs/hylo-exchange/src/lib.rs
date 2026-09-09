@@ -3,6 +3,7 @@ pub mod error;
 pub mod events;
 pub mod instructions;
 pub mod lst_registry;
+pub(crate) mod oracle;
 pub mod state;
 
 use anchor_lang::prelude::*;

@@ -186,7 +186,7 @@ dependencies = [
  "anchor-syn",
  "anyhow",
  "bs58",
- "heck",
+ "heck 0.3.3",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -279,7 +279,7 @@ checksum = "47914b4290ae2bdf4ec203aa821e6eba86d7c78ef497918938038dcc6919f953"
 dependencies = [
  "anchor-lang-idl-spec",
  "anyhow",
- "heck",
+ "heck 0.3.3",
  "regex",
  "serde",
  "serde_json",
@@ -321,7 +321,7 @@ dependencies = [
  "anyhow",
  "bs58",
  "cargo_toml",
- "heck",
+ "heck 0.3.3",
  "proc-macro2",
  "quote",
  "serde",
@@ -1223,6 +1223,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "generic-array-struct"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39e7f79d579196e41a4b0e6ac10e63c8bd4db1b15bf540c70c224d4da35b0df7"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "gethostname"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1302,6 +1314,12 @@ checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
 dependencies = [
  "unicode-segmentation",
 ]
+
+[[package]]
+name = "heck"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hermit-abi"
@@ -1430,6 +1448,7 @@ dependencies = [
  "hylo-core",
  "hylo-fix",
  "hylo-idl",
+ "inf1-svc-core",
  "mollusk-svm",
  "pyth-solana-receiver-sdk",
  "solana-address-lookup-table-interface",
@@ -1652,6 +1671,14 @@ checksum = "45a8a2b9cb3e0b0c1803dbb0758ffac5de2f425b23c28f518faabd9d805342ff"
 dependencies = [
  "equivalent",
  "hashbrown 0.16.1",
+]
+
+[[package]]
+name = "inf1-svc-core"
+version = "0.1.0"
+source = "git+https://github.com/igneous-labs/inf-1.5.git#51471fc1f4a6abee1d6e45e3ce0a387a63e708af"
+dependencies = [
+ "generic-array-struct",
 ]
 
 [[package]]

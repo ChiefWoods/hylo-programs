@@ -47,6 +47,24 @@ impl LstStakePoolProgram {
             Self::Marinade => MARINADE_SOL_VALUE_CALCULATOR,
         }
     }
+
+    pub fn program_id(&self) -> Pubkey {
+        match self {
+            Self::Spl => SPL_STAKE_POOL_PROGRAM,
+            Self::SanctumSpl => SANCTUM_SPL_SOL_STAKE_POOL_PROGRAM,
+            Self::SanctumSplMulti => SANCTUM_SPL_MULTI_SOL_STAKE_POOL_PROGRAM,
+            Self::Marinade => MARINADE_STAKE_POOL_PROGRAM,
+        }
+    }
+
+    pub fn preamble_offset(&self) -> usize {
+        match self {
+            Self::Spl => 0,
+            Self::SanctumSpl => 4,
+            Self::SanctumSplMulti => 8,
+            Self::Marinade => 12,
+        }
+    }
 }
 
 /// Serializable oracle price for event emission.

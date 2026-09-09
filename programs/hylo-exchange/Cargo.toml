@@ -29,6 +29,7 @@ hylo-core = { workspace = true }
 hylo-idl = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-address-lookup-table-interface = { workspace = true, features = ["bincode", "bytemuck"] }
+inf1-svc-core = { workspace = true }
 pyth-solana-receiver-sdk = { version = "=1.2.0", features = ["pro-compatible"] }
 
 [dev-dependencies]

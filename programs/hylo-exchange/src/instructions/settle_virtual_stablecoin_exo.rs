@@ -1,10 +1,15 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{
-    constants::*,
-    hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG},
-};
+use fix::prelude::{CheckedSub, UFix64, N6};
+use hylo_core::exchange_context::{ExchangeContext, ExoExchangeContext};
+use hylo_core::util::normalize_mint_exp;
+
+use crate::constants::*;
+use crate::error::ErrorCode;
+use crate::hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG};
+use crate::instructions::stablecoin_ops::{absorb_loss, drawdown_repay, mint_stablecoin};
+use crate::oracle::load_price_update;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -76,6 +81,114 @@ pub struct SettleVirtualStablecoinExo<'info> {
 pub fn handler(
     ctx: Context<SettleVirtualStablecoinExo>,
 ) -> Result<SettleVirtualStablecoinExoEvent> {
-    let _ = ctx;
-    todo!()
+    require_keys_eq!(
+        ctx.accounts.collateral_usd_pyth_feed.key(),
+        ctx.accounts.exo_pair.oracle,
+        ErrorCode::ExoOracleInvalid
+    );
+
+    let clock = Clock::get()?;
+    let price_update = load_price_update(
+        &ctx.accounts.collateral_usd_pyth_feed,
+        &ctx.accounts.exo_pair.oracle_feed_id,
+    )
+    .map_err(|_| error!(ErrorCode::ExoOracleInvalid))?;
+    let total_collateral =
+        normalize_mint_exp(&ctx.accounts.collateral_mint, ctx.accounts.collateral_vault.amount)?;
+    let exchange = ExoExchangeContext::load(
+        clock,
+        total_collateral,
+        ctx.accounts.exo_pair.stablecoin_mint_threshold()?,
+        ctx.accounts.exo_pair.oracle_config()?,
+        ctx.accounts.exo_pair.levercoin_fees,
+        &price_update,
+        ctx.accounts.exo_pair.virtual_stablecoin,
+        None,
+        ctx.accounts.exo_pair.sell_curve_config,
+        ctx.accounts.exo_pair.buy_curve_config,
+        ctx.accounts.exo_pair.levercoin_market_cap_limit.try_into()?,
+    )?;
+
+    let tvl = exchange
+        .total_value_locked()?
+        .checked_convert::<N6>()
+        .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinConversion))?;
+    let virtual_supply = ctx.accounts.exo_pair.virtual_stablecoin.supply()?;
+    let floor: UFix64<N6> = ctx
+        .accounts
+        .exo_pair
+        .virtual_stablecoin_supply_floor
+        .try_into()?;
+
+    let (stablecoin_burned, stablecoin_minted) = if tvl > virtual_supply {
+        let surplus = tvl
+            .checked_sub(&virtual_supply)
+            .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinUnderflow))?;
+        require!(surplus > UFix64::zero(), ErrorCode::SettleVirtualStablecoinNoop);
+        mint_stablecoin(
+            ctx.accounts.token_program.to_account_info(),
+            ctx.accounts.stablecoin_mint.to_account_info(),
+            ctx.accounts.stablecoin_pool.to_account_info(),
+            ctx.accounts.stablecoin_mint_auth.to_account_info(),
+            ctx.accounts.stablecoin_mint.key(),
+            ctx.accounts.hylo.stablecoin_auth_bump,
+            surplus.bits,
+        )?;
+        ctx.accounts.exo_pair.virtual_stablecoin.mint(surplus)?;
+        drawdown_repay(&mut ctx.accounts.exo_pair.pool_drawdown, surplus)?;
+        (UFix64::zero(), surplus)
+    } else if virtual_supply > tvl {
+        let overhang = virtual_supply
+            .checked_sub(&tvl)
+            .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinUnderflow))?;
+        let max_burn = virtual_supply
+            .checked_sub(&floor)
+            .unwrap_or_else(UFix64::zero);
+        let pool = UFix64::<N6>::new(ctx.accounts.stablecoin_pool.amount);
+        let burned = overhang.min(max_burn).min(pool);
+        require!(burned > UFix64::zero(), ErrorCode::SettleVirtualStablecoinNoop);
+        absorb_loss(
+            ctx.accounts.earn_pool.to_account_info(),
+            ctx.accounts.settlement_auth.to_account_info(),
+            ctx.accounts.hylo.to_account_info(),
+            ctx.accounts.pool_config.to_account_info(),
+            ctx.accounts.pool_auth.to_account_info(),
+            ctx.accounts.stablecoin_pool.to_account_info(),
+            ctx.accounts.stablecoin_mint.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
+            ctx.bumps.settlement_auth,
+            burned.bits,
+        )?;
+        ctx.accounts
+            .exo_pair
+            .virtual_stablecoin
+            .burn_limited(burned, floor)?;
+        ctx.accounts.exo_pair.pool_drawdown.drawdown(burned)?;
+        (burned, UFix64::zero())
+    } else {
+        return err!(ErrorCode::SettleVirtualStablecoinNoop);
+    };
+
+    let pool_balance = if stablecoin_minted > UFix64::zero() {
+        ctx.accounts
+            .stablecoin_pool
+            .amount
+            .saturating_add(stablecoin_minted.bits)
+    } else {
+        ctx.accounts
+            .stablecoin_pool
+            .amount
+            .saturating_sub(stablecoin_burned.bits)
+    };
+
+    let event = SettleVirtualStablecoinExoEvent {
+        collateral_mint: ctx.accounts.collateral_mint.key(),
+        stablecoin_burned: stablecoin_burned.into(),
+        stablecoin_minted: stablecoin_minted.into(),
+        virtual_stablecoin_supply: ctx.accounts.exo_pair.virtual_stablecoin.supply()?.into(),
+        pool_drawdown_outstanding: ctx.accounts.exo_pair.pool_drawdown.outstanding()?.into(),
+        pool_balance: UFix64::<N6>::new(pool_balance).into(),
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }
