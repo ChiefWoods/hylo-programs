@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::bpf_loader_upgradeable::UpgradeableLoaderState;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
@@ -65,9 +66,9 @@ pub struct RegisterLst<'info> {
     pub sanctum_calculator_program: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub sanctum_calculator_state: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Validated in handler.
     pub stake_pool_program_data: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Validated in handler.
     pub stake_pool_program: UncheckedAccount<'info>,
     /// CHECK: Address Lookup Table program ID is constrained below.
     #[account(address = solana_sdk_ids::address_lookup_table::ID)]
@@ -77,7 +78,29 @@ pub struct RegisterLst<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(_ctx: Context<RegisterLst>, rebalance_fee: UFixValue64) -> Result<RegisterLstEvent> {
+pub fn handler(ctx: Context<RegisterLst>, rebalance_fee: UFixValue64) -> Result<RegisterLstEvent> {
+    let upgradeable_loader_state = UpgradeableLoaderState::try_deserialize(
+        &mut &ctx
+            .accounts
+            .stake_pool_program
+            .to_account_info()
+            .data
+            .borrow()[..],
+    )?;
+
+    match upgradeable_loader_state {
+        UpgradeableLoaderState::Program {
+            programdata_address,
+        } => {
+            if programdata_address != ctx.accounts.stake_pool_program_data.key() {
+                return Err(ProgramError::InvalidAccountData.into());
+            }
+        }
+        _ => {
+            return Err(ProgramError::InvalidAccountData.into());
+        }
+    }
+
     let _ = rebalance_fee;
     todo!()
 }
