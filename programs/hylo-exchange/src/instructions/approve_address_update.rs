@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::program::HyloExchange;
+use crate::{error::ErrorCode, program::HyloExchange};
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
@@ -14,15 +14,19 @@ pub struct ApproveAddressUpdate<'info> {
     pub proposal: Account<'info, AddressUpdateProposal>,
     /// CHECK: IDL metadata: relations=proposal.
     pub new_address: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: no additional constraints.
-    pub program_data: UncheckedAccount<'info>,
+    #[account(
+        constraint = hylo_exchange.programdata_address()? == Some(program_data.key()) @ ErrorCode::AddressChangeUpgradeAuthority
+    )]
     pub hylo_exchange: Program<'info, HyloExchange>,
+    #[account(
+        constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key()) @ ErrorCode::AddressChangeUpgradeAuthority
+    )]
+    pub program_data: Account<'info, ProgramData>,
 }
 
 pub fn handler(
     ctx: Context<ApproveAddressUpdate>,
     address_field: AddressField,
 ) -> Result<ApproveAddressUpdateEvent> {
-    let _ = (ctx, address_field);
     todo!()
 }

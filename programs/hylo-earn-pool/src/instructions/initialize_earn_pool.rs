@@ -41,12 +41,16 @@ pub struct InitializeEarnPool<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
-    /// CHECK: IDL metadata: no additional constraints.
-    pub program_data: UncheckedAccount<'info>,
+    #[account(
+        constraint = hylo_earn_pool.programdata_address()? == Some(program_data.key())
+    )]
     pub hylo_earn_pool: Program<'info, HyloEarnPool>,
+    #[account(
+        constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key())
+    )]
+    pub program_data: Account<'info, ProgramData>,
 }
 
 pub fn handler(ctx: Context<InitializeEarnPool>) -> Result<()> {
-    let _ = ctx;
     todo!()
 }

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
-use crate::constants::*;
 
+use crate::constants::*;
 use crate::program::HyloExchange;
 #[allow(unused_imports)]
 use crate::state::*;
@@ -15,9 +15,14 @@ pub struct InitializeProtocol<'info> {
     /// CHECK: IDL metadata: no additional constraints.
     pub treasury: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
-    /// CHECK: IDL metadata: no additional constraints.
-    pub program_data: UncheckedAccount<'info>,
+    #[account(
+        constraint = hylo_exchange.programdata_address()? == Some(program_data.key())
+    )]
     pub hylo_exchange: Program<'info, HyloExchange>,
+    #[account(
+        constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key())
+    )]
+    pub program_data: Account<'info, ProgramData>,
 }
 
 pub fn handler(
@@ -29,7 +34,6 @@ pub fn handler(
     yield_harvest_config: YieldHarvestConfig,
 ) -> Result<()> {
     let _ = (
-        ctx,
         pause_authority,
         oracle_interval_secs,
         stablecoin_mint_threshold,
