@@ -11,3 +11,5 @@ pub const STAKED_HYUSD: &[u8] = b"staked_hyUSD";
 
 pub const METAPLEX_TOKEN_METADATA: Pubkey =
     Pubkey::from_str_const("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+
+pub const LP_TOKEN_NAME: &str = "sHYUSD";

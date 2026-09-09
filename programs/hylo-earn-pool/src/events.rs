@@ -2,6 +2,7 @@ use crate::state::*;
 use anchor_lang::prelude::*;
 
 #[event]
+#[derive(Clone)]
 pub struct AbsorbLossEvent {
     pub requested_loss: UFixValue64,
     pub amount_stablecoin_burned: UFixValue64,
@@ -38,6 +39,7 @@ pub struct UpdateWithdrawalLimitEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UserDepositEvent {
     pub stablecoin_deposited: UFixValue64,
     pub lp_token_nav: UFixValue64,
@@ -45,6 +47,7 @@ pub struct UserDepositEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UserWithdrawEvent {
     pub lp_token_burned: UFixValue64,
     pub stablecoin_withdrawn: UFixValue64,

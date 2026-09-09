@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
+use fix::prelude::{UFix64, N6};
 
 #[allow(unused_imports)]
 use crate::constants::*;
@@ -8,6 +9,8 @@ use crate::hylo_exchange::{
     constants::{HYLO, HYUSD, SETTLEMENT_AUTH},
 };
 use crate::{events::*, state::*};
+
+use super::token_ops;
 
 #[derive(Accounts)]
 pub struct AbsorbLoss<'info> {
@@ -46,6 +49,23 @@ pub struct AbsorbLoss<'info> {
 }
 
 pub fn handler(ctx: Context<AbsorbLoss>, amount: u64) -> Result<AbsorbLossEvent> {
-    let _ = (ctx, amount);
-    todo!()
+    let burned = amount.min(ctx.accounts.stablecoin_pool.amount);
+    let remaining = ctx.accounts.stablecoin_pool.amount.saturating_sub(burned);
+
+    let pool_auth_bump = [ctx.accounts.pool_config.pool_auth_bump];
+    let pool_auth_seeds: &[&[u8]] = &[POOL_AUTH, &pool_auth_bump];
+    token_ops::burn_pda(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.stablecoin_mint.to_account_info(),
+        ctx.accounts.stablecoin_pool.to_account_info(),
+        ctx.accounts.pool_auth.to_account_info(),
+        burned,
+        pool_auth_seeds,
+    )?;
+
+    Ok(AbsorbLossEvent {
+        requested_loss: UFix64::<N6>::new(amount).into(),
+        amount_stablecoin_burned: UFix64::<N6>::new(burned).into(),
+        remaining_pool_balance: UFix64::<N6>::new(remaining).into(),
+    })
 }
