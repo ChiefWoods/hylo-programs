@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::constants::*;
+use crate::{constants::*, hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG}};
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -11,13 +11,12 @@ pub struct SwapUsdcToLst<'info> {
     pub user: Signer<'info>,
     #[account(mut, seeds = [HYLO], bump)]
     pub hylo: Account<'info, Hylo>,
-    /// CHECK: PDA is constrained by its seeds below.
     #[account(
-        seeds = [b"pool_config"],
+        seeds = [&POOL_CONFIG],
         bump,
         seeds::program = HYLO_EARN_POOL
     )]
-    pub pool_config: UncheckedAccount<'info>,
+    pub pool_config: Account<'info, PoolConfig>,
     #[account(
         has_one = pool_state,
         seeds = [LST_HEADER, lst_mint.key().as_ref()],

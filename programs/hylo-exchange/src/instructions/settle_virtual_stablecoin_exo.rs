@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::constants::*;
+use crate::{constants::*, hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG}};
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -16,13 +16,12 @@ pub struct SettleVirtualStablecoinExo<'info> {
         bump,
     )]
     pub exo_pair: Account<'info, ExoPair>,
-    /// CHECK: PDA is constrained by its seeds below.
     #[account(
-        seeds = [b"pool_config"],
+        seeds = [&POOL_CONFIG],
         bump,
         seeds::program = HYLO_EARN_POOL
     )]
-    pub pool_config: UncheckedAccount<'info>,
+    pub pool_config: Account<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its fixed seed below.
     #[account(seeds = [SETTLEMENT_AUTH], bump)]
     pub settlement_auth: UncheckedAccount<'info>,
