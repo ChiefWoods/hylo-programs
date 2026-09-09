@@ -29,9 +29,13 @@ pub struct DeprecateLevercoinPool<'info> {
         associated_token::token_program = token_program,
     )]
     pub levercoin_pool: Account<'info, TokenAccount>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub admin_levercoin_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = levercoin_mint,
+        token::authority = admin,
+        token::token_program = token_program,
+    )]
+    pub admin_levercoin_ta: Account<'info, TokenAccount>,
     #[account(
         seeds = [XSOL],
         bump,

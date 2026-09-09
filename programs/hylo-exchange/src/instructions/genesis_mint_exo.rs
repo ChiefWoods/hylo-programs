@@ -48,15 +48,27 @@ pub struct GenesisMintExo<'info> {
         associated_token::token_program = token_program,
     )]
     pub collateral_vault: Account<'info, TokenAccount>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub admin_collateral_ta: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub dead_levercoin_ta: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub dead_stablecoin_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = collateral_mint,
+        token::authority = admin,
+        token::token_program = token_program,
+    )]
+    pub admin_collateral_ta: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        token::mint = levercoin_mint,
+        token::authority = dead,
+        token::token_program = token_program,
+    )]
+    pub dead_levercoin_ta: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        token::mint = stablecoin_mint,
+        token::authority = dead,
+        token::token_program = token_program,
+    )]
+    pub dead_stablecoin_ta: Account<'info, TokenAccount>,
     pub collateral_mint: Account<'info, Mint>,
     #[account(
         mut,
