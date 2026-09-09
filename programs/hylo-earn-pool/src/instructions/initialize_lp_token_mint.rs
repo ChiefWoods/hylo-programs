@@ -5,7 +5,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::state::*;
-use crate::hylo_exchange::constants::HYLO;
+use crate::hylo_exchange::{accounts::Hylo, constants::HYLO};
 
 #[derive(Accounts)]
 pub struct InitializeLpTokenMint<'info> {

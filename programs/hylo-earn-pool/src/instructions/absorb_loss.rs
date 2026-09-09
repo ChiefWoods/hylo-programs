@@ -4,7 +4,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 #[allow(unused_imports)]
 use crate::constants::*;
 use crate::{events::*, state::*};
-use crate::hylo_exchange::constants::{HYLO, HYUSD, SETTLEMENT_AUTH};
+use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, HYUSD, SETTLEMENT_AUTH}};
 
 #[derive(Accounts)]
 pub struct AbsorbLoss<'info> {
@@ -23,7 +23,7 @@ pub struct AbsorbLoss<'info> {
     #[account(seeds = [POOL_CONFIG], bump)]
     pub pool_config: Account<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [POOL_AUTH], bump)]
+    #[account(seeds = [POOL_AUTH], bump = pool_config.pool_auth_bump)]
     pub pool_auth: UncheckedAccount<'info>,
     #[account(
         mut,
@@ -35,7 +35,7 @@ pub struct AbsorbLoss<'info> {
     #[account(
         mut,
         seeds = [&HYUSD],
-        bump,
+        bump = hylo.stablecoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,

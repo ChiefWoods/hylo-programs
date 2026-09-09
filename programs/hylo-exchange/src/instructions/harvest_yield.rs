@@ -17,12 +17,12 @@ pub struct HarvestYield<'info> {
         has_one = lst_registry,
     )]
     pub hylo: Account<'info, Hylo>,
-    #[account(mut, seeds = [HYUSD], bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump,
+        bump = hylo.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.

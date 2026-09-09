@@ -29,7 +29,7 @@ pub struct MintLevercoinLst<'info> {
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, levercoin_mint.key().as_ref()],
-        bump,
+        bump = hylo.levercoin_auth_bump,
     )]
     pub levercoin_auth: UncheckedAccount<'info>,
     #[account(
@@ -63,7 +63,7 @@ pub struct MintLevercoinLst<'info> {
     )]
     pub user_levercoin_ta: Account<'info, TokenAccount>,
     pub lst_mint: Account<'info, Mint>,
-    #[account(mut, seeds = [XSOL], bump)]
+    #[account(mut, seeds = [XSOL], bump = hylo.levercoin_mint_bump)]
     pub levercoin_mint: Account<'info, Mint>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,

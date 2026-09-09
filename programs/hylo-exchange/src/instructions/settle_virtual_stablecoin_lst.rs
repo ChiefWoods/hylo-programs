@@ -24,13 +24,13 @@ pub struct SettleVirtualStablecoinLst<'info> {
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump,
+        bump = hylo.stablecoin_auth_bump,
     )]
     pub stablecoin_mint_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [POOL_AUTH],
-        bump,
+        bump = pool_config.pool_auth_bump,
         seeds::program = HYLO_EARN_POOL
     )]
     pub pool_auth: UncheckedAccount<'info>,
@@ -41,7 +41,7 @@ pub struct SettleVirtualStablecoinLst<'info> {
         associated_token::token_program = token_program,
     )]
     pub stablecoin_pool: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [HYUSD], bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,

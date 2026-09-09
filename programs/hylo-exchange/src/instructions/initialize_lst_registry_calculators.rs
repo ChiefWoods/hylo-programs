@@ -16,7 +16,7 @@ pub struct InitializeLstRegistryCalculators<'info> {
     )]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [LST_REGISTRY_AUTH], bump)]
+    #[account(seeds = [LST_REGISTRY_AUTH], bump = hylo.registry_auth_bump)]
     pub lst_registry_auth: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: writable; relations=hylo.
     #[account(mut)]

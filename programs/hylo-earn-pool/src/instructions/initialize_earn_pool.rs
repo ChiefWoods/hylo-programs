@@ -7,7 +7,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::state::*;
-use crate::hylo_exchange::constants::{HYLO, HYUSD};
+use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, HYUSD}};
 
 #[derive(Accounts)]
 pub struct InitializeEarnPool<'info> {
@@ -34,7 +34,7 @@ pub struct InitializeEarnPool<'info> {
     pub stablecoin_pool: Account<'info, TokenAccount>,
     #[account(
         seeds = [&HYUSD],
-        bump,
+        bump = hylo.stablecoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,

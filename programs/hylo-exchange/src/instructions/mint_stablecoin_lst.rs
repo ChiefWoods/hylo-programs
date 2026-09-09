@@ -29,7 +29,7 @@ pub struct MintStablecoinLst<'info> {
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump,
+        bump = hylo.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     #[account(
@@ -63,7 +63,7 @@ pub struct MintStablecoinLst<'info> {
     )]
     pub user_stablecoin_ta: Account<'info, TokenAccount>,
     pub lst_mint: Account<'info, Mint>,
-    #[account(mut, seeds = [HYUSD], bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,

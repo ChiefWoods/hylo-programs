@@ -5,7 +5,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
-use crate::hylo_exchange::constants::{HYLO, HYUSD};
+use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, HYUSD}};
 
 #[derive(Accounts)]
 pub struct UpdateWithdrawalLimit<'info> {
@@ -19,7 +19,7 @@ pub struct UpdateWithdrawalLimit<'info> {
     #[account(mut, seeds = [POOL_CONFIG], bump)]
     pub pool_config: Account<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [POOL_AUTH], bump)]
+    #[account(seeds = [POOL_AUTH], bump = pool_config.pool_auth_bump)]
     pub pool_auth: UncheckedAccount<'info>,
     #[account(
         associated_token::mint = stablecoin_mint,
@@ -29,7 +29,7 @@ pub struct UpdateWithdrawalLimit<'info> {
     pub stablecoin_pool: Account<'info, TokenAccount>,
     #[account(
         seeds = [&HYUSD],
-        bump,
+        bump = hylo.stablecoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,

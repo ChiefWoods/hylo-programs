@@ -56,7 +56,7 @@ pub struct RedeemStablecoinLst<'info> {
         token::token_program = token_program,
     )]
     pub user_lst_ta: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [HYUSD], bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     pub lst_mint: Account<'info, Mint>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.

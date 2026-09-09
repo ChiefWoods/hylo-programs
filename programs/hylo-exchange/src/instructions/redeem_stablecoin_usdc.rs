@@ -18,19 +18,19 @@ pub struct RedeemStablecoinUsdc<'info> {
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump,
+        bump = hylo.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [USDC_VAULT_AUTH, usdc_mint.key().as_ref()],
-        bump,
+        bump = usdc_pair.vault_auth_bump,
     )]
     pub usdc_vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [FEE_AUTH, usdc_mint.key().as_ref()],
-        bump,
+        bump = usdc_pair.fee_auth_bump,
     )]
     pub usdc_fee_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
@@ -74,7 +74,7 @@ pub struct RedeemStablecoinUsdc<'info> {
         token::token_program = token_program,
     )]
     pub user_usdc_ta: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [HYUSD], bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     #[account(address = anchor_spl::mint::USDC)]
     pub usdc_mint: Account<'info, Mint>,

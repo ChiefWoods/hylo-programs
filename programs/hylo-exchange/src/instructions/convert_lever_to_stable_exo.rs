@@ -21,19 +21,19 @@ pub struct ConvertLeverToStableExo<'info> {
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, levercoin_mint.key().as_ref()],
-        bump,
+        bump = exo_pair.levercoin_auth_bump,
     )]
     pub levercoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump,
+        bump = hylo.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [EXO_VAULT_AUTH, collateral_mint.key().as_ref()],
-        bump,
+        bump = exo_pair.vault_auth_bump,
     )]
     pub vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
@@ -69,12 +69,12 @@ pub struct ConvertLeverToStableExo<'info> {
         token::token_program = token_program,
     )]
     pub user_stablecoin_ta: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [HYUSD], bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     #[account(
         mut,
         seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()],
-        bump,
+        bump = exo_pair.levercoin_mint_bump,
     )]
     pub levercoin_mint: Account<'info, Mint>,
     pub collateral_mint: Account<'info, Mint>,

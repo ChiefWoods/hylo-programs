@@ -30,25 +30,25 @@ pub struct SwapExoToUsdcAll<'info> {
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump,
+        bump = hylo.stablecoin_auth_bump,
     )]
     pub stablecoin_mint_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [EXO_VAULT_AUTH, collateral_mint.key().as_ref()],
-        bump,
+        bump = exo_pair.vault_auth_bump,
     )]
     pub vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [USDC_VAULT_AUTH, usdc_mint.key().as_ref()],
-        bump,
+        bump = usdc_pair.vault_auth_bump,
     )]
     pub usdc_vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [POOL_AUTH],
-        bump,
+        bump = pool_config.pool_auth_bump,
         seeds::program = HYLO_EARN_POOL
     )]
     pub pool_auth: UncheckedAccount<'info>,
@@ -93,9 +93,9 @@ pub struct SwapExoToUsdcAll<'info> {
     pub collateral_mint: Account<'info, Mint>,
     #[account(address = anchor_spl::mint::USDC)]
     pub usdc_mint: Account<'info, Mint>,
-    #[account(mut, seeds = [HYUSD], bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
-    #[account(seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()], bump)]
+    #[account(seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()], bump = exo_pair.levercoin_mint_bump)]
     pub levercoin_mint: Account<'info, Mint>,
     /// CHECK: IDL metadata: no additional constraints.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,

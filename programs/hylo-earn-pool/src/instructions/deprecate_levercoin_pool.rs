@@ -5,7 +5,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::state::*;
-use crate::hylo_exchange::constants::{HYLO, XSOL};
+use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, XSOL}};
 
 #[derive(Accounts)]
 pub struct DeprecateLevercoinPool<'info> {
@@ -20,7 +20,7 @@ pub struct DeprecateLevercoinPool<'info> {
     #[account(seeds = [POOL_CONFIG], bump)]
     pub pool_config: Account<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [POOL_AUTH], bump)]
+    #[account(seeds = [POOL_AUTH], bump = pool_config.pool_auth_bump)]
     pub pool_auth: UncheckedAccount<'info>,
     #[account(
         mut,
@@ -38,7 +38,7 @@ pub struct DeprecateLevercoinPool<'info> {
     pub admin_levercoin_ta: Account<'info, TokenAccount>,
     #[account(
         seeds = [&XSOL],
-        bump,
+        bump = hylo.levercoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub levercoin_mint: Account<'info, Mint>,

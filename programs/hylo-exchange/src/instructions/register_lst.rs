@@ -36,7 +36,7 @@ pub struct RegisterLst<'info> {
     )]
     pub vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [LST_REGISTRY_AUTH], bump)]
+    #[account(seeds = [LST_REGISTRY_AUTH], bump = hylo.registry_auth_bump)]
     pub registry_auth: UncheckedAccount<'info>,
     #[account(
         mut,

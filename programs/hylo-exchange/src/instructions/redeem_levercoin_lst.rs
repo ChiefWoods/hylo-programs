@@ -56,7 +56,7 @@ pub struct RedeemLevercoinLst<'info> {
         token::token_program = token_program,
     )]
     pub user_lst_ta: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [XSOL], bump)]
+    #[account(mut, seeds = [XSOL], bump = hylo.levercoin_mint_bump)]
     pub levercoin_mint: Account<'info, Mint>,
     pub lst_mint: Account<'info, Mint>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.

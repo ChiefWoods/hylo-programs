@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 #[allow(unused_imports)]
 use crate::constants::*;
 use crate::{events::*, state::*};
-use crate::hylo_exchange::constants::HYLO;
+use crate::hylo_exchange::{accounts::Hylo, constants::HYLO};
 
 #[derive(Accounts)]
 pub struct UnpauseEarnPool<'info> {
