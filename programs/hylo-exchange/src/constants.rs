@@ -54,7 +54,6 @@ pub const VAULT_AUTH: &[u8] = b"vault_auth";
 #[constant]
 pub const XSOL: &[u8] = b"xSOL";
 
-// not imported from hylo-earn-pool due to circular dependency
-pub const HYLO_EARN_POOL: Pubkey = Pubkey::from_str_const("HysTabVUfmQBFcmzu1ctRd1Y1fxd66RBpboy1bmtDSQQ");
+pub const HYLO_EARN_POOL: Pubkey = crate::hylo_earn_pool::ID;
 
 pub const METAPLEX_TOKEN_METADATA: Pubkey = Pubkey::from_str_const("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
