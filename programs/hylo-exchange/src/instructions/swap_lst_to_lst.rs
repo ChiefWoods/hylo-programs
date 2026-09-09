@@ -11,9 +11,13 @@ pub struct SwapLstToLst<'info> {
     #[account(mut, seeds = [HYLO], bump)]
     pub hylo: Account<'info, Hylo>,
     pub lst_a_mint: Account<'info, Mint>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub lst_a_user_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = lst_a_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub lst_a_user_ta: Account<'info, TokenAccount>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [VAULT_AUTH, lst_a_mint.key().as_ref()],
@@ -33,9 +37,13 @@ pub struct SwapLstToLst<'info> {
     )]
     pub lst_a_header: Account<'info, LstHeader>,
     pub lst_b_mint: Account<'info, Mint>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub lst_b_user_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = lst_b_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub lst_b_user_ta: Account<'info, TokenAccount>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [VAULT_AUTH, lst_b_mint.key().as_ref()],
