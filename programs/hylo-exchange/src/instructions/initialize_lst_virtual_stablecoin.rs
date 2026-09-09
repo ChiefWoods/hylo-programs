@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
+use fix::prelude::{UFix64, N6};
+use hylo_core::virtual_stablecoin::SUPPLY_FLOOR;
 
 use crate::constants::*;
+use crate::error::ErrorCode;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -26,6 +29,19 @@ pub struct InitializeLstVirtualStablecoin<'info> {
 pub fn handler(
     ctx: Context<InitializeLstVirtualStablecoin>,
 ) -> Result<InitializeLstVirtualStablecoinEvent> {
-    let _ = ctx;
-    todo!()
+    require!(
+        ctx.accounts.hylo.virtual_stablecoin.supply()? == UFix64::zero(),
+        ErrorCode::LstVirtualStablecoinAlreadyInitialized
+    );
+
+    let supply = UFix64::<N6>::new(ctx.accounts.stablecoin_mint.supply);
+    require!(supply >= SUPPLY_FLOOR, ErrorCode::TokenAmountPrecisionError);
+
+    ctx.accounts.hylo.virtual_stablecoin.mint(supply)?;
+
+    let event = InitializeLstVirtualStablecoinEvent {
+        stablecoin_amount: supply.into(),
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

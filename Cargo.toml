@@ -15,6 +15,7 @@ hylo-core = "2.5.0"
 hylo-fix = "0.8.0"
 hylo-idl = "2.5.0"
 solana-sdk-ids = "2.2.1"
+solana-address-lookup-table-interface = "2.2.2"
 
 [profile.release]
 overflow-checks = true

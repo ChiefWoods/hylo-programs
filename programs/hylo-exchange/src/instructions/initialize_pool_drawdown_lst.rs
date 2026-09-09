@@ -1,4 +1,5 @@
 use crate::constants::*;
+use crate::error::ErrorCode;
 use anchor_lang::prelude::*;
 
 #[allow(unused_imports)]
@@ -18,6 +19,11 @@ pub struct InitializePoolDrawdownLst<'info> {
 }
 
 pub fn handler(ctx: Context<InitializePoolDrawdownLst>) -> Result<()> {
-    let _ = ctx;
-    todo!()
+    match ctx.accounts.hylo.pool_drawdown.outstanding() {
+        Ok(_) => err!(ErrorCode::AdminNoop),
+        Err(_) => {
+            ctx.accounts.hylo.pool_drawdown = PoolDrawdown::default();
+            Ok(())
+        }
+    }
 }

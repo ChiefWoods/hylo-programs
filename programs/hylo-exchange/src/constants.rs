@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use fix::prelude::UFixValue64;
 
 #[constant]
 pub const ADDRESS_UPDATE_PROPOSAL: &[u8] = b"address_update_proposal";
@@ -83,3 +84,51 @@ pub const SANCTUM_SPL_MULTI_SOL_VALUE_CALCULATOR: Pubkey =
 
 pub const MARINADE_SOL_VALUE_CALCULATOR: Pubkey =
     Pubkey::from_str_const("mare3SCyfZkAndpBRBeonETmkCCB3TJTTrz8ZN2dnhP");
+
+/// Canonical calculator state accounts, recovered from the deployed LST registry ALT.
+pub const SPL_SOL_VALUE_CALCULATOR_STATE: Pubkey =
+    Pubkey::from_str_const("7orJ4kDhn1Ewp54j29tBzUWDFGhyimhYi7sxybZcphHd");
+
+pub const SANCTUM_SPL_SOL_VALUE_CALCULATOR_STATE: Pubkey =
+    Pubkey::from_str_const("84C2M1NcmqFiP37qHKzuz8ydyyjCrzNqY77GhvHtCpyf");
+
+pub const SANCTUM_SPL_MULTI_SOL_VALUE_CALCULATOR_STATE: Pubkey =
+    Pubkey::from_str_const("Ehcuy2BzuY9BscqcH2K43tDKqoi6xQHxChtVjzrMfvU8");
+
+pub const MARINADE_SOL_VALUE_CALCULATOR_STATE: Pubkey =
+    Pubkey::from_str_const("FMbUjYFtqgm4Zfpg7MguUg33RQ3tvkd22NgaCCAs3M6E");
+
+pub const SPL_STAKE_POOL_PROGRAM_DATA: Pubkey =
+    Pubkey::from_str_const("EmiU8AQkB2sswTxVB6aCmsAJftoowZGGDXuytm6X65R3");
+
+pub const SANCTUM_SPL_STAKE_POOL_PROGRAM_DATA: Pubkey =
+    Pubkey::from_str_const("Cn5fegqLh8Fmvffisr4Wk3LmuaUgMMzTFfEuidpZFsvV");
+
+pub const SANCTUM_SPL_MULTI_STAKE_POOL_PROGRAM_DATA: Pubkey =
+    Pubkey::from_str_const("HxBTMuB7cFBPVWVJjTi9iBF8MPd7mfY1QnrrWfLAySFd");
+
+pub const MARINADE_STAKE_POOL_PROGRAM_DATA: Pubkey =
+    Pubkey::from_str_const("4PQH9YmfuKrVyZaibkLYpJZPv2FPaybhq2GAuBcWMSBf");
+
+/// Deployed SOL/USD oracle confidence tolerance: 1% N9.
+pub const DEFAULT_ORACLE_CONF_TOLERANCE: UFixValue64 = UFixValue64 {
+    bits: 10_000_000,
+    exp: -9,
+};
+
+/// Neutral-zone midpoint used as the exogenous genesis collateral ratio.
+pub const GENESIS_TARGET_COLLATERAL_RATIO: u64 = 1_500_000_000;
+
+pub const LST_DECIMALS: u8 = 9;
+
+pub const PROTOCOL_TOKEN_DECIMALS: u8 = 6;
+
+pub const STABLECOIN_TOKEN_NAME: &str = "Hylo USD";
+
+pub const LST_LEVERCOIN_TOKEN_NAME: &str = "Hylo 3x Leveraged SOL";
+
+/// Canonical calculator preamble: (calculator, calculator state, stake program, program data) × 4 variants.
+pub const LST_REGISTRY_CALCULATOR_PREAMBLE_LEN: usize = 16;
+
+/// Per-LST registry block: header, mint, vault, pool state.
+pub const LST_REGISTRY_BLOCK_LEN: usize = 4;

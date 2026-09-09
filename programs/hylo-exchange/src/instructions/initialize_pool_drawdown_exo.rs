@@ -1,4 +1,5 @@
 use crate::constants::*;
+use crate::error::ErrorCode;
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
@@ -26,6 +27,11 @@ pub struct InitializePoolDrawdownExo<'info> {
 }
 
 pub fn handler(ctx: Context<InitializePoolDrawdownExo>) -> Result<()> {
-    let _ = ctx;
-    todo!()
+    match ctx.accounts.exo_pair.pool_drawdown.outstanding() {
+        Ok(_) => err!(ErrorCode::AdminNoop),
+        Err(_) => {
+            ctx.accounts.exo_pair.pool_drawdown = PoolDrawdown::default();
+            Ok(())
+        }
+    }
 }

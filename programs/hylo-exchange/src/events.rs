@@ -63,6 +63,7 @@ pub struct ConvertStableToLeverLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct GenesisMintExoEvent {
     pub exo_pair: Pubkey,
     pub collateral_mint: Pubkey,
@@ -94,11 +95,13 @@ pub struct HarvestYieldEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct InitializeLstVirtualStablecoinEvent {
     pub stablecoin_amount: UFixValue64,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct InitializeUsdcEvent {
     pub vault_auth_bump: u8,
     pub fee_auth_bump: u8,
@@ -227,6 +230,7 @@ pub struct RedeemStablecoinUsdcEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct RegisterExoEvent {
     pub exo_pair: Pubkey,
     pub collateral_mint: Pubkey,
@@ -241,6 +245,7 @@ pub struct RegisterExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct RegisterLstEvent {
     pub header: Pubkey,
     pub mint: Pubkey,

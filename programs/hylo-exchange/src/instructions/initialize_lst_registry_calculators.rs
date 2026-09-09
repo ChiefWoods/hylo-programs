@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::constants::*;
+use crate::error::ErrorCode;
+use crate::lst_registry;
 
 #[allow(unused_imports)]
 use crate::state::*;
@@ -31,6 +33,33 @@ pub struct InitializeLstRegistryCalculators<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(_ctx: Context<InitializeLstRegistryCalculators>) -> Result<()> {
-    todo!()
+pub fn handler(ctx: Context<InitializeLstRegistryCalculators>) -> Result<()> {
+    let registry_data = ctx.accounts.lst_registry.try_borrow_data()?;
+    let table = lst_registry::load_table(&registry_data)?;
+    let authority = table
+        .meta
+        .authority
+        .ok_or_else(|| error!(ErrorCode::LstRegistryLookupTableDeser))?;
+    require_keys_eq!(
+        authority,
+        ctx.accounts.lst_registry_auth.key(),
+        ErrorCode::LstRegistryPreamble
+    );
+    require!(
+        table.addresses.is_empty(),
+        ErrorCode::LstRegistryCalculatorsAlreadyInitialized
+    );
+    drop(registry_data);
+
+    let preamble = lst_registry::calculator_preamble();
+    lst_registry::extend_lookup_table(
+        ctx.accounts.lut_program.to_account_info(),
+        ctx.accounts.lst_registry.to_account_info(),
+        ctx.accounts.lst_registry_auth.to_account_info(),
+        ctx.accounts.admin.to_account_info(),
+        ctx.accounts.system_program.to_account_info(),
+        ctx.accounts.hylo.registry_auth_bump,
+        &preamble,
+    )?;
+    Ok(())
 }
