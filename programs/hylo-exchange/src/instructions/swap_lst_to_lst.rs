@@ -27,12 +27,11 @@ pub struct SwapLstToLst<'info> {
         associated_token::token_program = token_program,
     )]
     pub lst_a_vault: Account<'info, TokenAccount>,
-    /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [LST_HEADER, lst_a_mint.key().as_ref()],
         bump,
     )]
-    pub lst_a_header: UncheckedAccount<'info>,
+    pub lst_a_header: Account<'info, LstHeader>,
     pub lst_b_mint: Account<'info, Mint>,
     /// CHECK: IDL metadata: writable.
     #[account(mut)]
@@ -50,12 +49,11 @@ pub struct SwapLstToLst<'info> {
         associated_token::token_program = token_program,
     )]
     pub lst_b_vault: Account<'info, TokenAccount>,
-    /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [LST_HEADER, lst_b_mint.key().as_ref()],
         bump,
     )]
-    pub lst_b_header: UncheckedAccount<'info>,
+    pub lst_b_header: Account<'info, LstHeader>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [FEE_AUTH, lst_a_mint.key().as_ref()],
