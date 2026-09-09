@@ -2,11 +2,12 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::constants::*;
-
 use crate::hylo_exchange::{
     accounts::Hylo,
     constants::{HYLO, HYUSD},
 };
+use fix::prelude::{UFix64, N6};
+
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
@@ -45,6 +46,14 @@ pub fn handler(
     ctx: Context<UpdateDepositLimit>,
     new_deposit_limit: UFixValue64,
 ) -> Result<UpdateDepositLimitEvent> {
-    let _ = (ctx, new_deposit_limit);
-    todo!()
+    let config = &mut ctx.accounts.pool_config;
+    let old_deposit_limit = config.deposit_limiter.limit;
+    let pool_amount = UFix64::<N6>::new(ctx.accounts.stablecoin_pool.amount);
+    config.update_deposit_limit(pool_amount, new_deposit_limit)?;
+    let event = UpdateDepositLimitEvent {
+        old_deposit_limit,
+        new_deposit_limit: config.deposit_limiter.limit,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

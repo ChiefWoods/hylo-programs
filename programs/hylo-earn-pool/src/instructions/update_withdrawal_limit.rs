@@ -45,6 +45,13 @@ pub fn handler(
     ctx: Context<UpdateWithdrawalLimit>,
     new_withdrawal_limit: UFixValue64,
 ) -> Result<UpdateWithdrawalLimitEvent> {
-    let _ = (ctx, new_withdrawal_limit);
-    todo!()
+    let config = &mut ctx.accounts.pool_config;
+    let old_withdrawal_limit = config.withdrawal_limiter.limit;
+    config.update_withdrawal_limit(new_withdrawal_limit, Clock::get()?.epoch)?;
+    let event = UpdateWithdrawalLimitEvent {
+        old_withdrawal_limit,
+        new_withdrawal_limit: config.withdrawal_limiter.limit,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

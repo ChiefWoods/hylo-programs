@@ -21,6 +21,8 @@ pub struct PauseEarnPool<'info> {
 }
 
 pub fn handler(ctx: Context<PauseEarnPool>) -> Result<PauseEvent> {
-    let _ = ctx;
-    todo!()
+    ctx.accounts.pool_config.pause()?;
+    let event = PauseEvent {};
+    emit_cpi!(event.clone());
+    Ok(event)
 }

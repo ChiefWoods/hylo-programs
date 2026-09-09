@@ -21,6 +21,8 @@ pub struct UnpauseEarnPool<'info> {
 }
 
 pub fn handler(ctx: Context<UnpauseEarnPool>) -> Result<UnpauseEvent> {
-    let _ = ctx;
-    todo!()
+    ctx.accounts.pool_config.unpause()?;
+    let event = UnpauseEvent {};
+    emit_cpi!(event.clone());
+    Ok(event)
 }

@@ -9,24 +9,29 @@ pub struct AbsorbLossEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct PauseEvent {}
 
 #[event]
+#[derive(Clone)]
 pub struct UnpauseEvent {}
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateDepositLimitEvent {
     pub old_deposit_limit: UFixValue64,
     pub new_deposit_limit: UFixValue64,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateWithdrawalFeeEvent {
     pub old_withdrawal_fee: UFixValue64,
     pub new_withdrawal_fee: UFixValue64,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateWithdrawalLimitEvent {
     pub old_withdrawal_limit: UFixValue64,
     pub new_withdrawal_limit: UFixValue64,

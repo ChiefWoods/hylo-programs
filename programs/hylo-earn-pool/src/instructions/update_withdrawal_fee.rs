@@ -24,6 +24,13 @@ pub fn handler(
     ctx: Context<UpdateWithdrawalFee>,
     new_withdrawal_fee: UFixValue64,
 ) -> Result<UpdateWithdrawalFeeEvent> {
-    let _ = (ctx, new_withdrawal_fee);
-    todo!()
+    let config = &mut ctx.accounts.pool_config;
+    let old_withdrawal_fee = config.withdrawal_fee;
+    config.update_withdrawal_fee(new_withdrawal_fee)?;
+    let event = UpdateWithdrawalFeeEvent {
+        old_withdrawal_fee,
+        new_withdrawal_fee: config.withdrawal_fee,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }
