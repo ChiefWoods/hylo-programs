@@ -71,7 +71,10 @@ pub struct RegisterLst<'info> {
         || sanctum_calculator_program.key() == SANCTUM_SPL_MULTI_SOL_VALUE_CALCULATOR
     )]
     pub sanctum_calculator_program: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Validated owner.
+    #[account(
+        owner = sanctum_calculator_program.key()
+    )]
     pub sanctum_calculator_state: UncheckedAccount<'info>,
     /// CHECK: Validated in handler.
     pub stake_pool_program_data: UncheckedAccount<'info>,
