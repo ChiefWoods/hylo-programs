@@ -56,4 +56,5 @@ pub const XSOL: &[u8] = b"xSOL";
 
 pub const HYLO_EARN_POOL: Pubkey = crate::hylo_earn_pool::ID;
 
-pub const METAPLEX_TOKEN_METADATA: Pubkey = Pubkey::from_str_const("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+pub const METAPLEX_TOKEN_METADATA: Pubkey =
+    Pubkey::from_str_const("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");

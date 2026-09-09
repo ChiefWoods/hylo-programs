@@ -3,9 +3,12 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::constants::*;
 
+use crate::hylo_exchange::{
+    accounts::Hylo,
+    constants::{FEE_AUTH, HYLO, HYUSD},
+};
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
-use crate::hylo_exchange::{accounts::Hylo, constants::{FEE_AUTH, HYLO, HYUSD}};
 
 #[derive(Accounts)]
 pub struct UserWithdraw<'info> {

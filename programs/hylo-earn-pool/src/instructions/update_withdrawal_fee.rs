@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 
 #[allow(unused_imports)]
 use crate::constants::*;
-use crate::{events::*, state::*};
 use crate::hylo_exchange::{accounts::Hylo, constants::HYLO};
+use crate::{events::*, state::*};
 
 #[derive(Accounts)]
 pub struct UpdateWithdrawalFee<'info> {

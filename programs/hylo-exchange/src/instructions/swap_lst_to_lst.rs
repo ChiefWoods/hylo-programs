@@ -1,6 +1,6 @@
+use crate::constants::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
-use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};

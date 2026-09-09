@@ -3,9 +3,12 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::constants::*;
 
+use crate::hylo_exchange::{
+    accounts::Hylo,
+    constants::{HYLO, HYUSD, MINT_AUTH},
+};
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
-use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, HYUSD, MINT_AUTH}};
 
 #[derive(Accounts)]
 pub struct UserDeposit<'info> {

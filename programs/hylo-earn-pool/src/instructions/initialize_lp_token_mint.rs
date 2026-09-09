@@ -3,9 +3,12 @@ use anchor_spl::token::{Mint, Token};
 
 use crate::constants::*;
 
+use crate::hylo_exchange::{
+    accounts::Hylo,
+    constants::{HYLO, MINT_AUTH},
+};
 #[allow(unused_imports)]
 use crate::state::*;
-use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, MINT_AUTH}};
 
 #[derive(Accounts)]
 pub struct InitializeLpTokenMint<'info> {

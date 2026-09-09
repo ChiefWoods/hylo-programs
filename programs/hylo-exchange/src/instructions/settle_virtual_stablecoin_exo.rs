@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{constants::*, hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG}};
+use crate::{
+    constants::*,
+    hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG},
+};
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};

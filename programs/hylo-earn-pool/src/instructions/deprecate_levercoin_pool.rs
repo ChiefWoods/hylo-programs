@@ -3,9 +3,12 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::constants::*;
 
+use crate::hylo_exchange::{
+    accounts::Hylo,
+    constants::{HYLO, XSOL},
+};
 #[allow(unused_imports)]
 use crate::state::*;
-use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, XSOL}};
 
 #[derive(Accounts)]
 pub struct DeprecateLevercoinPool<'info> {

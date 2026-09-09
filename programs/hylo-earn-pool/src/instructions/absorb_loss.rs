@@ -3,8 +3,11 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 #[allow(unused_imports)]
 use crate::constants::*;
+use crate::hylo_exchange::{
+    accounts::Hylo,
+    constants::{HYLO, HYUSD, SETTLEMENT_AUTH},
+};
 use crate::{events::*, state::*};
-use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, HYUSD, SETTLEMENT_AUTH}};
 
 #[derive(Accounts)]
 pub struct AbsorbLoss<'info> {
