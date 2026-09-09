@@ -60,7 +60,10 @@ pub struct RegisterLst<'info> {
         owner = solana_sdk_ids::address_lookup_table::ID
     )]
     pub lst_registry: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Validated owner.
+    #[account(
+        owner = stake_pool_program.key()
+    )]
     pub lst_stake_pool_state: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub sanctum_calculator_program: UncheckedAccount<'info>,
