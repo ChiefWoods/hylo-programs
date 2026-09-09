@@ -32,9 +32,13 @@ pub struct UserDeposit<'info> {
         token::token_program = token_program,
     )]
     pub user_stablecoin_ta: Account<'info, TokenAccount>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_lp_token_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = lp_token_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_lp_token_ta: Account<'info, TokenAccount>,
     /// CHECK: PDA is constrained by its fixed seed below.
     #[account(seeds = [POOL_AUTH], bump)]
     pub pool_auth: UncheckedAccount<'info>,
