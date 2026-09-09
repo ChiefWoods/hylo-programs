@@ -5,7 +5,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
-use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, HYUSD}};
+use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, HYUSD, MINT_AUTH}};
 
 #[derive(Accounts)]
 pub struct UserDeposit<'info> {
@@ -51,7 +51,7 @@ pub struct UserDeposit<'info> {
     pub stablecoin_pool: Account<'info, TokenAccount>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
-        seeds = [MINT_AUTH, lp_token_mint.key().as_ref()],
+        seeds = [&MINT_AUTH, lp_token_mint.key().as_ref()],
         bump = pool_config.lp_token_auth_bump,
     )]
     pub lp_token_auth: UncheckedAccount<'info>,

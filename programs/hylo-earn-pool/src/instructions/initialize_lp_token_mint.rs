@@ -5,7 +5,7 @@ use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::state::*;
-use crate::hylo_exchange::{accounts::Hylo, constants::HYLO};
+use crate::hylo_exchange::{accounts::Hylo, constants::{HYLO, MINT_AUTH}};
 
 #[derive(Accounts)]
 pub struct InitializeLpTokenMint<'info> {
@@ -21,7 +21,7 @@ pub struct InitializeLpTokenMint<'info> {
     pub hylo: Account<'info, Hylo>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
-        seeds = [MINT_AUTH, lp_token_mint.key().as_ref()],
+        seeds = [&MINT_AUTH, lp_token_mint.key().as_ref()],
         bump,
     )]
     pub lp_token_auth: UncheckedAccount<'info>,
