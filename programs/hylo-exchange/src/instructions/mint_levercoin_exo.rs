@@ -48,9 +48,13 @@ pub struct MintLevercoinExo<'info> {
     /// CHECK: IDL metadata: writable.
     #[account(mut)]
     pub user_collateral_ta: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_levercoin_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = levercoin_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_levercoin_ta: Account<'info, TokenAccount>,
     pub collateral_mint: Account<'info, Mint>,
     #[account(
         mut,

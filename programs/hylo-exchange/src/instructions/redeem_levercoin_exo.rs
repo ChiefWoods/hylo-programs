@@ -39,9 +39,13 @@ pub struct RedeemLevercoinExo<'info> {
         associated_token::token_program = token_program,
     )]
     pub fee_vault: Account<'info, TokenAccount>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_levercoin_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = levercoin_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_levercoin_ta: Account<'info, TokenAccount>,
     /// CHECK: IDL metadata: writable.
     #[account(mut)]
     pub user_collateral_ta: UncheckedAccount<'info>,

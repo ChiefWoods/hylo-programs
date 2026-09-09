@@ -50,9 +50,13 @@ pub struct ConvertStableToLeverLst<'info> {
         bump,
     )]
     pub levercoin_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_levercoin_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = levercoin_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_levercoin_ta: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
 

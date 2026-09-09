@@ -40,9 +40,13 @@ pub struct RedeemLevercoinLst<'info> {
     pub lst_vault: Account<'info, TokenAccount>,
     #[account(seeds = [LST_HEADER, lst_mint.key().as_ref()], bump)]
     pub lst_header: Account<'info, LstHeader>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_levercoin_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = levercoin_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_levercoin_ta: Account<'info, TokenAccount>,
     /// CHECK: IDL metadata: writable.
     #[account(mut)]
     pub user_lst_ta: UncheckedAccount<'info>,
