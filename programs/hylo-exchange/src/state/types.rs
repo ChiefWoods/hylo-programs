@@ -8,6 +8,16 @@ pub enum AddressField {
     PauseAuthority,
 }
 
+impl AsRef<[u8]> for AddressField {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            Self::Admin => b"admin",
+            Self::Treasury => b"treasury",
+            Self::PauseAuthority => b"pause_authority",
+        }
+    }
+}
+
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
 pub enum LstStakePoolProgram {
     Spl,
