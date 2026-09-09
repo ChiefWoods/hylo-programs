@@ -26,6 +26,8 @@ pub struct PauseExoPair<'info> {
 }
 
 pub fn handler(ctx: Context<PauseExoPair>) -> Result<PauseEvent> {
-    let _ = ctx;
-    todo!()
+    ctx.accounts.exo_pair.pause()?;
+    let event = PauseEvent {};
+    emit_cpi!(event.clone());
+    Ok(event)
 }

@@ -18,6 +18,8 @@ pub struct PauseLstPair<'info> {
 }
 
 pub fn handler(ctx: Context<PauseLstPair>) -> Result<PauseEvent> {
-    let _ = ctx;
-    todo!()
+    ctx.accounts.hylo.pause_lst_pair()?;
+    let event = PauseEvent {};
+    emit_cpi!(event.clone());
+    Ok(event)
 }

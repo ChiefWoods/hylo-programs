@@ -170,6 +170,7 @@ pub struct MintStablecoinUsdcEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct PauseEvent {}
 
 #[event]
@@ -352,6 +353,7 @@ pub struct SwapUsdcToLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UnpauseEvent {}
 
 #[event]

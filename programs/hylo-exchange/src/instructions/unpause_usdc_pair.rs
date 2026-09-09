@@ -19,6 +19,8 @@ pub struct UnpauseUsdcPair<'info> {
 }
 
 pub fn handler(ctx: Context<UnpauseUsdcPair>) -> Result<UnpauseEvent> {
-    let _ = ctx;
-    todo!()
+    ctx.accounts.usdc_pair.unpause()?;
+    let event = UnpauseEvent {};
+    emit_cpi!(event.clone());
+    Ok(event)
 }

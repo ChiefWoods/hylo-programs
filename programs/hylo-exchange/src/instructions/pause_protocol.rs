@@ -18,6 +18,8 @@ pub struct PauseProtocol<'info> {
 }
 
 pub fn handler(ctx: Context<PauseProtocol>) -> Result<PauseEvent> {
-    let _ = ctx;
-    todo!()
+    ctx.accounts.hylo.pause_protocol()?;
+    let event = PauseEvent {};
+    emit_cpi!(event.clone());
+    Ok(event)
 }
