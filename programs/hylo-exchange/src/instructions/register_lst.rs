@@ -71,8 +71,10 @@ pub struct RegisterLst<'info> {
     pub lst_stake_pool_state: UncheckedAccount<'info>,
     /// CHECK: Validated address.
     #[account(
-        constraint = sanctum_calculator_program.key() == SANCTUM_SPL_SOL_VALUE_CALCULATOR
+        constraint = sanctum_calculator_program.key() == SPL_SOL_VALUE_CALCULATOR
+        || sanctum_calculator_program.key() == SANCTUM_SPL_SOL_VALUE_CALCULATOR
         || sanctum_calculator_program.key() == SANCTUM_SPL_MULTI_SOL_VALUE_CALCULATOR
+        || sanctum_calculator_program.key() == MARINADE_SOL_VALUE_CALCULATOR
     )]
     pub sanctum_calculator_program: UncheckedAccount<'info>,
     /// CHECK: Validated owner.
