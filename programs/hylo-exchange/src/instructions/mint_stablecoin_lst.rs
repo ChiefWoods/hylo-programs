@@ -49,9 +49,13 @@ pub struct MintStablecoinLst<'info> {
     /// CHECK: IDL metadata: writable.
     #[account(mut)]
     pub user_lst_ta: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_stablecoin_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = stablecoin_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_stablecoin_ta: Account<'info, TokenAccount>,
     pub lst_mint: Account<'info, Mint>,
     #[account(mut, seeds = [HYUSD], bump)]
     pub stablecoin_mint: Account<'info, Mint>,

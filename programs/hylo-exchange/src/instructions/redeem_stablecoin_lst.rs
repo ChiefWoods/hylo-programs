@@ -40,9 +40,13 @@ pub struct RedeemStablecoinLst<'info> {
     pub lst_vault: Account<'info, TokenAccount>,
     #[account(seeds = [LST_HEADER, lst_mint.key().as_ref()], bump)]
     pub lst_header: Account<'info, LstHeader>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_stablecoin_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = stablecoin_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_stablecoin_ta: Account<'info, TokenAccount>,
     /// CHECK: IDL metadata: writable.
     #[account(mut)]
     pub user_lst_ta: UncheckedAccount<'info>,

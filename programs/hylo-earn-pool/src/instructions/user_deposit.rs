@@ -25,9 +25,13 @@ pub struct UserDeposit<'info> {
         seeds::program = hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_stablecoin_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = stablecoin_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_stablecoin_ta: Account<'info, TokenAccount>,
     /// CHECK: IDL metadata: writable.
     #[account(mut)]
     pub user_lp_token_ta: UncheckedAccount<'info>,
