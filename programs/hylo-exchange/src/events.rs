@@ -2,6 +2,7 @@ use crate::state::*;
 use anchor_lang::prelude::*;
 
 #[event]
+#[derive(Clone)]
 pub struct AcceptAddressUpdateEvent {
     pub address_field: AddressField,
     pub old_address: Pubkey,
@@ -9,12 +10,14 @@ pub struct AcceptAddressUpdateEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct ApproveAddressUpdateEvent {
     pub address_field: AddressField,
     pub new_address: Pubkey,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct CancelAddressUpdateEvent {
     pub address_field: AddressField,
     pub new_address: Pubkey,
@@ -169,6 +172,7 @@ pub struct MintStablecoinUsdcEvent {
 pub struct PauseEvent {}
 
 #[event]
+#[derive(Clone)]
 pub struct ProposeAddressUpdateEvent {
     pub address_field: AddressField,
     pub current_address: Pubkey,
