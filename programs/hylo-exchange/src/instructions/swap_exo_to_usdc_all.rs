@@ -78,9 +78,13 @@ pub struct SwapExoToUsdcAll<'info> {
     /// CHECK: IDL metadata: writable.
     #[account(mut)]
     pub user_collateral_ta: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_usdc_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = usdc_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_usdc_ta: Account<'info, TokenAccount>,
     pub collateral_mint: Account<'info, Mint>,
     #[account(address = anchor_spl::mint::USDC)]
     pub usdc_mint: Account<'info, Mint>,

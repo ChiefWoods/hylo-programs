@@ -65,9 +65,13 @@ pub struct MintStablecoinUsdc<'info> {
         token::token_program = token_program,
     )]
     pub user_stablecoin_ta: Account<'info, TokenAccount>,
-    /// CHECK: IDL metadata: writable.
-    #[account(mut)]
-    pub user_usdc_ta: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        token::mint = usdc_mint,
+        token::authority = user,
+        token::token_program = token_program,
+    )]
+    pub user_usdc_ta: Account<'info, TokenAccount>,
     #[account(mut, seeds = [HYUSD], bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     #[account(address = anchor_spl::mint::USDC)]
