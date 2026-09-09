@@ -6,6 +6,7 @@ use hylo_core::pyth::USDC_USD;
 use crate::{
     constants::*,
     hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG},
+    instructions::rebalance::{self, ExoUsdcAccounts},
 };
 
 #[allow(unused_imports)]
@@ -112,13 +113,48 @@ pub struct SwapExoToUsdcAll<'info> {
     pub earn_pool: UncheckedAccount<'info>,
 }
 
-pub fn handler(
-    ctx: Context<SwapExoToUsdcAll>,
+    pub fn handler(
+    mut ctx: Context<SwapExoToUsdcAll>,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<()> {
     if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
-    let _ = slippage_config;
-    todo!()
+    let settlement_auth_bump = ctx.bumps.settlement_auth;
+    let (swap_event, settle_event) = {
+        let a = &mut ctx.accounts;
+        rebalance::swap_exo_to_usdc(
+            ExoUsdcAccounts {
+                user: &a.user,
+                hylo: &a.hylo,
+                pool_config: &a.pool_config,
+                exo_pair: &mut a.exo_pair,
+                usdc_pair: &mut a.usdc_pair,
+                stablecoin_mint_auth: &a.stablecoin_mint_auth,
+                vault_auth: &a.vault_auth,
+                usdc_vault_auth: &a.usdc_vault_auth,
+                pool_auth: &a.pool_auth,
+                settlement_auth: &a.settlement_auth,
+                collateral_vault: &mut a.collateral_vault,
+                usdc_collateral_vault: &mut a.usdc_collateral_vault,
+                stablecoin_pool: &mut a.stablecoin_pool,
+                user_collateral_ta: &mut a.user_collateral_ta,
+                user_usdc_ta: &mut a.user_usdc_ta,
+                collateral_mint: &a.collateral_mint,
+                usdc_mint: &a.usdc_mint,
+                stablecoin_mint: &mut a.stablecoin_mint,
+                levercoin_mint: &a.levercoin_mint,
+                collateral_usd_pyth_feed: &a.collateral_usd_pyth_feed,
+                usdc_usd_pyth_feed: &a.usdc_usd_pyth_feed,
+                token_program: &a.token_program,
+                earn_pool: &a.earn_pool,
+                settlement_auth_bump,
+            },
+            None,
+            slippage_config,
+        )?
+    };
+    emit_cpi!(swap_event);
+    emit_cpi!(settle_event);
+    Ok(())
 }

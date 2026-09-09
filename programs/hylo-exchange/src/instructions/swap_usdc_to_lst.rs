@@ -6,6 +6,7 @@ use hylo_core::pyth::{SOL_USD, USDC_USD};
 use crate::{
     constants::*,
     hylo_earn_pool::{accounts::PoolConfig, constants::POOL_CONFIG},
+    instructions::rebalance::{self, LstUsdcAccounts},
 };
 
 #[allow(unused_imports)]
@@ -111,8 +112,8 @@ pub struct SwapUsdcToLst<'info> {
     pub earn_pool: UncheckedAccount<'info>,
 }
 
-pub fn handler(
-    ctx: Context<SwapUsdcToLst>,
+    pub fn handler(
+    mut ctx: Context<SwapUsdcToLst>,
     amount: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<()> {
@@ -122,6 +123,42 @@ pub fn handler(
     if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
-    let _ = (amount, slippage_config);
-    todo!()
+    let lst_vault_auth_bump = ctx.bumps.lst_vault_auth;
+    let settlement_auth_bump = ctx.bumps.settlement_auth;
+    let (swap_event, _settle_event) = {
+        let a = &mut ctx.accounts;
+        rebalance::swap_usdc_to_lst(
+            LstUsdcAccounts {
+                user: &a.user,
+                hylo: &mut a.hylo,
+                pool_config: &a.pool_config,
+                lst_header: &a.lst_header,
+                pool_state: &a.pool_state,
+                usdc_pair: &mut a.usdc_pair,
+                stablecoin_mint_auth: &a.stablecoin_mint_auth,
+                lst_vault_auth: &a.lst_vault_auth,
+                usdc_vault_auth: &a.usdc_vault_auth,
+                pool_auth: &a.pool_auth,
+                settlement_auth: &a.settlement_auth,
+                lst_vault: &mut a.lst_vault,
+                usdc_vault: &mut a.usdc_vault,
+                stablecoin_pool: &mut a.stablecoin_pool,
+                user_lst_ta: &mut a.user_lst_ta,
+                user_usdc_ta: &mut a.user_usdc_ta,
+                lst_mint: &a.lst_mint,
+                usdc_mint: &a.usdc_mint,
+                stablecoin_mint: &mut a.stablecoin_mint,
+                sol_usd_pyth_feed: &a.sol_usd_pyth_feed,
+                usdc_usd_pyth_feed: &a.usdc_usd_pyth_feed,
+                token_program: &a.token_program,
+                earn_pool: &a.earn_pool,
+                lst_vault_auth_bump,
+                settlement_auth_bump,
+            },
+            amount,
+            slippage_config,
+        )?
+    };
+    emit_cpi!(swap_event);
+    Ok(())
 }

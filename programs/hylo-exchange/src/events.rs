@@ -260,6 +260,7 @@ pub struct RegisterLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SettleRebalancePnlExoEvent {
     pub collateral_mint: Pubkey,
     pub pnl: RebalancePnlValue,
@@ -268,6 +269,7 @@ pub struct SettleRebalancePnlExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SettleRebalancePnlLstEvent {
     pub pnl: RebalancePnlValue,
     pub stablecoin_burned: UFixValue64,
@@ -301,6 +303,7 @@ pub struct SettleVirtualStablecoinUsdcEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SwapExoToUsdcEvent {
     pub collateral_mint: Pubkey,
     pub collateral_deposited: UFixValue64,
@@ -319,6 +322,7 @@ pub struct SwapLstToLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SwapLstToUsdcEvent {
     pub lst_mint: Pubkey,
     pub lst_deposited: UFixValue64,
@@ -328,6 +332,7 @@ pub struct SwapLstToUsdcEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SwapUsdcToExoEvent {
     pub collateral_mint: Pubkey,
     pub usdc_deposited: UFixValue64,
@@ -337,6 +342,7 @@ pub struct SwapUsdcToExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SwapUsdcToLstEvent {
     pub lst_mint: Pubkey,
     pub usdc_deposited: UFixValue64,
