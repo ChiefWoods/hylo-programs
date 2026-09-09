@@ -58,3 +58,9 @@ pub const HYLO_EARN_POOL: Pubkey = crate::hylo_earn_pool::ID;
 
 pub const METAPLEX_TOKEN_METADATA: Pubkey =
     Pubkey::from_str_const("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+
+pub const SANCTUM_SPL_SOL_VALUE_CALCULATOR: Pubkey =
+    Pubkey::from_str_const("sp1V4h2gWorkGhVcazBc22Hfo2f5sd7jcjT4EDPrWFF");
+
+pub const SANCTUM_SPL_MULTI_SOL_VALUE_CALCULATOR: Pubkey =
+    Pubkey::from_str_const("ssmbu3KZxgonUtjEMCKspZzxvUQCxAFnyh1rcHUeEDo");

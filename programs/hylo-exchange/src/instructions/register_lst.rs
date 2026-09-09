@@ -65,7 +65,11 @@ pub struct RegisterLst<'info> {
         owner = stake_pool_program.key()
     )]
     pub lst_stake_pool_state: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: no additional constraints.
+    /// CHECK: Validated address.
+    #[account(
+        constraint = sanctum_calculator_program.key() == SANCTUM_SPL_SOL_VALUE_CALCULATOR
+        || sanctum_calculator_program.key() == SANCTUM_SPL_MULTI_SOL_VALUE_CALCULATOR
+    )]
     pub sanctum_calculator_program: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub sanctum_calculator_state: UncheckedAccount<'info>,
