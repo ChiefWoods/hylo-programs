@@ -1,4 +1,13 @@
 pub mod types;
+pub use hylo_core::fees::controller::{FeePair, LevercoinFees, StablecoinFees};
+pub use hylo_core::lst::sol_price::LstSolPrice;
+pub use hylo_core::lst::total_sol_cache::TotalSolCache;
+pub use hylo_core::rebalance::pnl::RebalancePnlValue;
+pub use hylo_core::rebalance::pool_drawdown::PoolDrawdown;
+pub use hylo_core::rebalance::pricing::RebalanceCurveConfig;
+pub use hylo_core::slippage_config::SlippageConfig;
+pub use hylo_core::virtual_stablecoin::VirtualStablecoin;
+pub use hylo_core::yields::{HarvestCache, YieldHarvestConfig};
 pub use types::*;
 pub mod address_update_proposal;
 pub use address_update_proposal::*;

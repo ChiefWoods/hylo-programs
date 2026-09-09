@@ -1,2 +1,1 @@
-pub mod types;
-pub use types::*;
+pub use hylo_core::slippage_config::SlippageConfig;
