@@ -10,12 +10,17 @@ use crate::{events::*, state::*};
 pub struct MintStablecoinExo<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
-    #[account(seeds = [HYLO], bump)]
+    #[account(
+        seeds = [HYLO],
+        bump,
+        has_one = stablecoin_mint,
+    )]
     pub hylo: Account<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
+        has_one = collateral_mint,
     )]
     pub exo_pair: Account<'info, ExoPair>,
     /// CHECK: PDA is constrained by its seeds below.

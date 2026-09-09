@@ -12,7 +12,12 @@ use crate::{events::*, state::*};
 pub struct RedeemLevercoinLst<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
-    #[account(mut, seeds = [HYLO], bump)]
+    #[account(
+        mut,
+        seeds = [HYLO],
+        bump,
+        has_one = levercoin_mint,
+    )]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(

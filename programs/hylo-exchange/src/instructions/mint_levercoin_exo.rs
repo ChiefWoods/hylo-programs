@@ -11,7 +11,11 @@ pub struct MintLevercoinExo<'info> {
     pub user: Signer<'info>,
     #[account(seeds = [HYLO], bump)]
     pub hylo: Account<'info, Hylo>,
-    #[account(seeds = [EXO_PAIR, collateral_mint.key().as_ref()], bump)]
+    #[account(
+        seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
+        bump,
+        has_one = collateral_mint,
+    )]
     pub exo_pair: Account<'info, ExoPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(

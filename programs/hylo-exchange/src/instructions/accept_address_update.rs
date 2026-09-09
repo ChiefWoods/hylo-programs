@@ -17,7 +17,10 @@ pub struct AcceptAddressUpdate<'info> {
         has_one = admin,
     )]
     pub hylo: Account<'info, Hylo>,
-    #[account(mut)]
+    #[account(
+        mut,
+        has_one = new_address,
+    )]
     pub proposal: Account<'info, AddressUpdateProposal>,
 }
 

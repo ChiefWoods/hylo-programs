@@ -8,12 +8,17 @@ use crate::{events::*, state::*};
 #[derive(Accounts)]
 pub struct PauseExoPair<'info> {
     pub pause_authority: Signer<'info>,
-    #[account(seeds = [HYLO], bump)]
+    #[account(
+        seeds = [HYLO],
+        bump,
+        has_one = pause_authority,
+    )]
     pub hylo: Account<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
+        has_one = collateral_mint,
     )]
     pub exo_pair: Account<'info, ExoPair>,
     pub collateral_mint: Account<'info, Mint>,

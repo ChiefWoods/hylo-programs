@@ -9,7 +9,12 @@ use crate::state::*;
 pub struct InitializeLstRegistry<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
-    #[account(mut, seeds = [HYLO], bump)]
+    #[account(
+        mut,
+        seeds = [HYLO],
+        bump,
+        has_one = admin,
+    )]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: PDA is constrained by its fixed seed below.
     #[account(seeds = [LST_REGISTRY_AUTH], bump)]

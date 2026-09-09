@@ -11,7 +11,8 @@ pub struct PauseEarnPool<'info> {
     #[account(
         seeds = [&HYLO],
         bump,
-        seeds::program = crate::hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID,
+        has_one = pause_authority,
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(mut, seeds = [POOL_CONFIG], bump)]

@@ -11,7 +11,12 @@ use crate::state::*;
 pub struct InitializeMints<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
-    #[account(mut, seeds = [HYLO], bump)]
+    #[account(
+        mut,
+        seeds = [HYLO],
+        bump,
+        has_one = admin,
+    )]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(

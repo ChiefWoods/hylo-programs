@@ -16,6 +16,7 @@ pub struct RegisterLst<'info> {
         seeds = [HYLO],
         bump,
         has_one = lst_registry,
+        has_one = admin,
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(

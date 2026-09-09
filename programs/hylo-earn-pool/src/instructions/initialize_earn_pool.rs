@@ -22,7 +22,8 @@ pub struct InitializeEarnPool<'info> {
     #[account(
         seeds = [&HYLO],
         bump,
-        seeds::program = crate::hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID,
+        has_one = admin,
     )]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: PDA is constrained by its fixed seed below.

@@ -13,6 +13,7 @@ pub struct InitializeLstRegistryCalculators<'info> {
         seeds = [HYLO],
         bump,
         has_one = lst_registry,
+        has_one = admin,
     )]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: PDA is constrained by its fixed seed below.

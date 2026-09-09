@@ -8,7 +8,11 @@ use crate::{events::*, state::*};
 #[derive(Accounts)]
 pub struct UpdateLstRebalanceFee<'info> {
     pub admin: Signer<'info>,
-    #[account(seeds = [HYLO], bump)]
+    #[account(
+        seeds = [HYLO],
+        bump,
+        has_one = admin,
+    )]
     pub hylo: Account<'info, Hylo>,
     #[account(
         mut,

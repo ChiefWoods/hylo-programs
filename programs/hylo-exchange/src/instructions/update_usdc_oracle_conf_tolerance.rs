@@ -7,7 +7,11 @@ use crate::{events::*, state::*};
 #[derive(Accounts)]
 pub struct UpdateUsdcOracleConfTolerance<'info> {
     pub admin: Signer<'info>,
-    #[account(seeds = [HYLO], bump)]
+    #[account(
+        seeds = [HYLO],
+        bump,
+        has_one = admin,
+    )]
     pub hylo: Account<'info, Hylo>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
     pub usdc_pair: Account<'info, UsdcPair>,

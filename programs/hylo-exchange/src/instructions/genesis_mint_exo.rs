@@ -13,12 +13,17 @@ pub struct GenesisMintExo<'info> {
     /// CHECK: Address is pinned to hylo_idl::pda::DEAD.
     #[account(address = hylo_idl::pda::DEAD)]
     pub dead: UncheckedAccount<'info>,
-    #[account(seeds = [HYLO], bump)]
+    #[account(
+        seeds = [HYLO],
+        bump,
+        has_one = admin,
+    )]
     pub hylo: Account<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
+        has_one = collateral_mint,
     )]
     pub exo_pair: Account<'info, ExoPair>,
     /// CHECK: PDA is constrained by its seeds below.

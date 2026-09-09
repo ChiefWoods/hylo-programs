@@ -7,7 +7,12 @@ use crate::state::*;
 #[derive(Accounts)]
 pub struct InitializePoolDrawdownLst<'info> {
     pub admin: Signer<'info>,
-    #[account(mut, seeds = [HYLO], bump)]
+    #[account(
+        mut,
+        seeds = [HYLO],
+        bump,
+        has_one = admin,
+    )]
     pub hylo: Account<'info, Hylo>,
 }
 

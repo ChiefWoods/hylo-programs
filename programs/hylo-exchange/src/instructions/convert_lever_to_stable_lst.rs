@@ -11,7 +11,13 @@ use crate::{events::*, state::*};
 pub struct ConvertLeverToStableLst<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
-    #[account(mut, seeds = [HYLO], bump)]
+    #[account(
+        mut,
+        seeds = [HYLO],
+        bump,
+        has_one = stablecoin_mint,
+        has_one = levercoin_mint,
+    )]
     pub hylo: Account<'info, Hylo>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,

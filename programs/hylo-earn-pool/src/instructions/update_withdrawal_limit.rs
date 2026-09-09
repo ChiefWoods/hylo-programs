@@ -16,7 +16,8 @@ pub struct UpdateWithdrawalLimit<'info> {
     #[account(
         seeds = [&HYLO],
         bump,
-        seeds::program = crate::hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID,
+        has_one = admin,
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(mut, seeds = [POOL_CONFIG], bump)]

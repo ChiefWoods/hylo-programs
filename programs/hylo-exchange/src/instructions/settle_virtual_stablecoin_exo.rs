@@ -17,6 +17,7 @@ pub struct SettleVirtualStablecoinExo<'info> {
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
+        has_one = collateral_mint,
     )]
     pub exo_pair: Account<'info, ExoPair>,
     #[account(

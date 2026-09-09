@@ -17,7 +17,8 @@ pub struct DeprecateLevercoinPool<'info> {
     #[account(
         seeds = [&HYLO],
         bump,
-        seeds::program = crate::hylo_exchange::ID
+        seeds::program = crate::hylo_exchange::ID,
+        has_one = admin,
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(seeds = [POOL_CONFIG], bump)]

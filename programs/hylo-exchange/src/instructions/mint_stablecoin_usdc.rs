@@ -11,7 +11,11 @@ use crate::{events::*, state::*};
 #[derive(Accounts)]
 pub struct MintStablecoinUsdc<'info> {
     pub user: Signer<'info>,
-    #[account(seeds = [HYLO], bump)]
+    #[account(
+        seeds = [HYLO],
+        bump,
+        has_one = stablecoin_mint,
+    )]
     pub hylo: Account<'info, Hylo>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
     pub usdc_pair: Account<'info, UsdcPair>,

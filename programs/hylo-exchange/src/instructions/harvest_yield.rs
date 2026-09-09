@@ -15,6 +15,7 @@ pub struct HarvestYield<'info> {
         seeds = [HYLO],
         bump,
         has_one = lst_registry,
+        has_one = stablecoin_mint,
     )]
     pub hylo: Account<'info, Hylo>,
     #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]

@@ -7,7 +7,12 @@ use crate::{events::*, state::*};
 #[derive(Accounts)]
 pub struct PauseLstPair<'info> {
     pub pause_authority: Signer<'info>,
-    #[account(mut, seeds = [HYLO], bump)]
+    #[account(
+        mut,
+        seeds = [HYLO],
+        bump,
+        has_one = pause_authority,
+    )]
     pub hylo: Account<'info, Hylo>,
 }
 
