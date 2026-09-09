@@ -1431,6 +1431,7 @@ dependencies = [
  "hylo-fix",
  "hylo-idl",
  "mollusk-svm",
+ "pyth-solana-receiver-sdk",
  "solana-sdk-ids",
 ]
 
