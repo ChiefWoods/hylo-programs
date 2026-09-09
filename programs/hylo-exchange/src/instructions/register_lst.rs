@@ -5,6 +5,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::constants::*;
 
+use crate::error::ErrorCode;
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
@@ -69,13 +70,7 @@ pub struct RegisterLst<'info> {
         owner = stake_pool_program.key()
     )]
     pub lst_stake_pool_state: UncheckedAccount<'info>,
-    /// CHECK: Validated address.
-    #[account(
-        constraint = sanctum_calculator_program.key() == SPL_SOL_VALUE_CALCULATOR
-        || sanctum_calculator_program.key() == SANCTUM_SPL_SOL_VALUE_CALCULATOR
-        || sanctum_calculator_program.key() == SANCTUM_SPL_MULTI_SOL_VALUE_CALCULATOR
-        || sanctum_calculator_program.key() == MARINADE_SOL_VALUE_CALCULATOR
-    )]
+    /// CHECK: Validated in handler.
     pub sanctum_calculator_program: UncheckedAccount<'info>,
     /// CHECK: Validated owner.
     #[account(
@@ -116,6 +111,14 @@ pub fn handler(ctx: Context<RegisterLst>, rebalance_fee: UFixValue64) -> Result<
             return Err(ProgramError::InvalidAccountData.into());
         }
     }
+
+    let lst_stake_pool_program = LstStakePoolProgram::new(ctx.accounts.lst_stake_pool_state.key())
+        .ok_or(error!(ErrorCode::LstStakePoolNotSupported))?;
+
+    require!(
+        ctx.accounts.sanctum_calculator_program.key() == lst_stake_pool_program.calculator(),
+        ErrorCode::LstContextInvalid
+    );
 
     let _ = rebalance_fee;
     todo!()

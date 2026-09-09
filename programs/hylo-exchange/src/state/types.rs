@@ -1,10 +1,7 @@
 use anchor_lang::prelude::*;
 pub use fix::prelude::UFixValue64;
 
-use crate::{
-    MARINADE_STAKE_POOL_PROGRAM, SANCTUM_SPL_MULTI_SOL_STAKE_POOL_PROGRAM,
-    SANCTUM_SPL_SOL_STAKE_POOL_PROGRAM, SPL_STAKE_POOL_PROGRAM,
-};
+use crate::constants::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
 pub enum AddressField {
@@ -32,12 +29,22 @@ pub enum LstStakePoolProgram {
 }
 
 impl LstStakePoolProgram {
-    pub fn address(&self) -> Pubkey {
+    pub fn new(pubkey: Pubkey) -> Option<Self> {
+        match pubkey {
+            SPL_STAKE_POOL_PROGRAM => Some(Self::Spl),
+            SANCTUM_SPL_SOL_STAKE_POOL_PROGRAM => Some(Self::SanctumSpl),
+            SANCTUM_SPL_MULTI_SOL_STAKE_POOL_PROGRAM => Some(Self::SanctumSplMulti),
+            MARINADE_STAKE_POOL_PROGRAM => Some(Self::Marinade),
+            _ => None,
+        }
+    }
+
+    pub fn calculator(&self) -> Pubkey {
         match self {
-            Self::Spl => SPL_STAKE_POOL_PROGRAM,
-            Self::SanctumSpl => SANCTUM_SPL_SOL_STAKE_POOL_PROGRAM,
-            Self::SanctumSplMulti => SANCTUM_SPL_MULTI_SOL_STAKE_POOL_PROGRAM,
-            Self::Marinade => MARINADE_STAKE_POOL_PROGRAM,
+            Self::Spl => SPL_SOL_VALUE_CALCULATOR,
+            Self::SanctumSpl => SANCTUM_SPL_SOL_VALUE_CALCULATOR,
+            Self::SanctumSplMulti => SANCTUM_SPL_MULTI_SOL_VALUE_CALCULATOR,
+            Self::Marinade => MARINADE_SOL_VALUE_CALCULATOR,
         }
     }
 }
