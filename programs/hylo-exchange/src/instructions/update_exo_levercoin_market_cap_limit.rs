@@ -29,6 +29,13 @@ pub fn handler(
     ctx: Context<UpdateExoLevercoinMarketCapLimit>,
     new_levercoin_market_cap_limit: UFixValue64,
 ) -> Result<UpdateLevercoinMarketCapLimitEvent> {
-    let _ = (ctx, new_levercoin_market_cap_limit);
-    todo!()
+    let pair = &mut ctx.accounts.exo_pair;
+    let old_levercoin_market_cap_limit = pair.levercoin_market_cap_limit;
+    pair.update_levercoin_market_cap_limit(new_levercoin_market_cap_limit)?;
+    let event = UpdateLevercoinMarketCapLimitEvent {
+        old_levercoin_market_cap_limit,
+        new_levercoin_market_cap_limit: pair.levercoin_market_cap_limit,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

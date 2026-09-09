@@ -22,7 +22,7 @@ custom-panic = []
 test-sbf = []
 
 [dependencies]
-anchor-lang = { workspace = true, features = ["event-cpi"] }
+anchor-lang = { workspace = true, features = ["event-cpi", "init-if-needed"] }
 anchor-spl = { workspace = true, features = ["metadata"] }
 hylo-fix = { workspace = true }
 hylo-core = { workspace = true }

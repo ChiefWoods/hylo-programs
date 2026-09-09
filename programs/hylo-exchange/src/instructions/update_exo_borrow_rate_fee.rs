@@ -29,6 +29,13 @@ pub fn handler(
     ctx: Context<UpdateExoBorrowRateFee>,
     new_borrow_rate_fee: UFixValue64,
 ) -> Result<UpdateFeeEvent> {
-    let _ = (ctx, new_borrow_rate_fee);
-    todo!()
+    let pair = &mut ctx.accounts.exo_pair;
+    let old_fee = pair.borrow_rate_fee;
+    pair.update_borrow_rate_fee(new_borrow_rate_fee)?;
+    let event = UpdateFeeEvent {
+        old_fee,
+        new_fee: pair.borrow_rate_fee,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

@@ -1,7 +1,7 @@
 use crate::constants::*;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -34,7 +34,8 @@ pub struct WithdrawFees<'info> {
     )]
     pub fee_vault: Account<'info, TokenAccount>,
     #[account(
-        mut,
+        init_if_needed,
+        payer = payer,
         associated_token::mint = fee_token_mint,
         associated_token::authority = treasury,
         associated_token::token_program = token_program,
@@ -47,6 +48,33 @@ pub struct WithdrawFees<'info> {
 }
 
 pub fn handler(ctx: Context<WithdrawFees>) -> Result<WithdrawFeesEvent> {
-    let _ = ctx;
-    todo!()
+    let amount = ctx.accounts.fee_vault.amount;
+    if amount > 0 {
+        let mint_key = ctx.accounts.fee_token_mint.key();
+        let bump = [ctx.bumps.fee_auth];
+        let signer_seeds: &[&[u8]] = &[FEE_AUTH, mint_key.as_ref(), &bump];
+        token::transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.fee_vault.to_account_info(),
+                    mint: ctx.accounts.fee_token_mint.to_account_info(),
+                    to: ctx.accounts.treasury_ata.to_account_info(),
+                    authority: ctx.accounts.fee_auth.to_account_info(),
+                },
+                &[signer_seeds],
+            ),
+            amount,
+            ctx.accounts.fee_token_mint.decimals,
+        )?;
+    }
+
+    let event = WithdrawFeesEvent {
+        mint: ctx.accounts.fee_token_mint.key(),
+        vault: ctx.accounts.fee_vault.key(),
+        treasury_ata: ctx.accounts.treasury_ata.key(),
+        amount,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

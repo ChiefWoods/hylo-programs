@@ -347,18 +347,21 @@ pub struct SwapUsdcToLstEvent {
 pub struct UnpauseEvent {}
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateBorrowRateCurveConfigEvent {
     pub old_curve_config: BorrowRateCurveConfig,
     pub new_curve_config: BorrowRateCurveConfig,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateLevercoinFeesEvent {
     pub old_levercoin_fees: LevercoinFees,
     pub new_levercoin_fees: LevercoinFees,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateLevercoinMarketCapLimitEvent {
     pub old_levercoin_market_cap_limit: UFixValue64,
     pub new_levercoin_market_cap_limit: UFixValue64,
@@ -371,6 +374,7 @@ pub struct UpdateLstPricesEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateLstRebalanceFeeEvent {
     pub lst_mint: Pubkey,
     pub old_rebalance_fee: UFixValue64,
@@ -378,54 +382,63 @@ pub struct UpdateLstRebalanceFeeEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateOracleAddressEvent {
     pub old_oracle: Pubkey,
     pub new_oracle: Pubkey,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateOracleConfEvent {
     pub old_oracle_conf_tolerance: UFixValue64,
     pub new_oracle_conf_tolerance: UFixValue64,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateOracleIntervalEvent {
     pub old_oracle_interval_secs: u64,
     pub new_oracle_interval_secs: u64,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateRebalanceCurveConfigEvent {
     pub old_curve_config: RebalanceCurveConfig,
     pub new_curve_config: RebalanceCurveConfig,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateStablecoinMintThresholdEvent {
     pub old_stablecoin_mint_threshold: UFixValue64,
     pub new_stablecoin_mint_threshold: UFixValue64,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateFeeEvent {
     pub old_fee: UFixValue64,
     pub new_fee: UFixValue64,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateParToleranceEvent {
     pub old_par_tolerance: UFixValue64,
     pub new_par_tolerance: UFixValue64,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct UpdateYieldHarvestConfigEvent {
     pub old_yield_harvest_config: YieldHarvestConfig,
     pub new_yield_harvest_config: YieldHarvestConfig,
 }
 
 #[event]
+#[derive(Clone)]
 pub struct WithdrawFeesEvent {
     pub mint: Pubkey,
     pub vault: Pubkey,

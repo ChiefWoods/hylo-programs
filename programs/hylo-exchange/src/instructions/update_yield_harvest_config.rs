@@ -21,6 +21,13 @@ pub fn handler(
     ctx: Context<UpdateYieldHarvestConfig>,
     new_yield_harvest_config: YieldHarvestConfig,
 ) -> Result<UpdateYieldHarvestConfigEvent> {
-    let _ = (ctx, new_yield_harvest_config);
-    todo!()
+    let hylo = &mut ctx.accounts.hylo;
+    let old_yield_harvest_config = hylo.yield_harvest_config;
+    hylo.update_yield_harvest_config(new_yield_harvest_config)?;
+    let event = UpdateYieldHarvestConfigEvent {
+        old_yield_harvest_config,
+        new_yield_harvest_config: hylo.yield_harvest_config,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

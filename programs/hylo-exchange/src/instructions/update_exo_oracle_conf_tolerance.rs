@@ -29,6 +29,13 @@ pub fn handler(
     ctx: Context<UpdateExoOracleConfTolerance>,
     new_oracle_conf_tolerance: UFixValue64,
 ) -> Result<UpdateOracleConfEvent> {
-    let _ = (ctx, new_oracle_conf_tolerance);
-    todo!()
+    let pair = &mut ctx.accounts.exo_pair;
+    let old_oracle_conf_tolerance = pair.oracle_conf_tolerance;
+    pair.update_oracle_conf_tolerance(new_oracle_conf_tolerance)?;
+    let event = UpdateOracleConfEvent {
+        old_oracle_conf_tolerance,
+        new_oracle_conf_tolerance: pair.oracle_conf_tolerance,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

@@ -22,6 +22,13 @@ pub fn handler(
     ctx: Context<UpdateUsdcRedeemFee>,
     new_redeem_fee: UFixValue64,
 ) -> Result<UpdateFeeEvent> {
-    let _ = (ctx, new_redeem_fee);
-    todo!()
+    let pair = &mut ctx.accounts.usdc_pair;
+    let old_fee = pair.redeem_fee;
+    pair.update_redeem_fee(new_redeem_fee)?;
+    let event = UpdateFeeEvent {
+        old_fee,
+        new_fee: pair.redeem_fee,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

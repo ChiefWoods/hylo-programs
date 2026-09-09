@@ -29,6 +29,13 @@ pub fn handler(
     ctx: Context<UpdateExoStablecoinMintThreshold>,
     new_stablecoin_mint_threshold: UFixValue64,
 ) -> Result<UpdateStablecoinMintThresholdEvent> {
-    let _ = (ctx, new_stablecoin_mint_threshold);
-    todo!()
+    let pair = &mut ctx.accounts.exo_pair;
+    let old_stablecoin_mint_threshold = pair.stablecoin_mint_threshold;
+    pair.update_stablecoin_mint_threshold(new_stablecoin_mint_threshold)?;
+    let event = UpdateStablecoinMintThresholdEvent {
+        old_stablecoin_mint_threshold,
+        new_stablecoin_mint_threshold: pair.stablecoin_mint_threshold,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

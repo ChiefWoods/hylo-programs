@@ -19,6 +19,7 @@ pub struct UpdateLstRebalanceFee<'info> {
         mut,
         seeds = [LST_HEADER, lst_mint.key().as_ref()],
         bump,
+        constraint = lst_header.mint == lst_mint.key(),
     )]
     pub lst_header: Account<'info, LstHeader>,
     pub lst_mint: Account<'info, Mint>,
@@ -28,6 +29,14 @@ pub fn handler(
     ctx: Context<UpdateLstRebalanceFee>,
     new_rebalance_fee: UFixValue64,
 ) -> Result<UpdateLstRebalanceFeeEvent> {
-    let _ = (ctx, new_rebalance_fee);
-    todo!()
+    let header = &mut ctx.accounts.lst_header;
+    let old_rebalance_fee = header.rebalance_fee;
+    header.update_rebalance_fee(new_rebalance_fee)?;
+    let event = UpdateLstRebalanceFeeEvent {
+        lst_mint: ctx.accounts.lst_mint.key(),
+        old_rebalance_fee,
+        new_rebalance_fee: header.rebalance_fee,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

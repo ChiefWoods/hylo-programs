@@ -21,6 +21,13 @@ pub fn handler(
     ctx: Context<UpdateLstSellCurveConfig>,
     new_sell_curve_config: RebalanceCurveConfig,
 ) -> Result<UpdateRebalanceCurveConfigEvent> {
-    let _ = (ctx, new_sell_curve_config);
-    todo!()
+    let hylo = &mut ctx.accounts.hylo;
+    let old_curve_config = hylo.lst_sell_curve_config;
+    hylo.update_lst_sell_curve_config(new_sell_curve_config)?;
+    let event = UpdateRebalanceCurveConfigEvent {
+        old_curve_config,
+        new_curve_config: hylo.lst_sell_curve_config,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

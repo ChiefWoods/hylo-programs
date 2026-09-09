@@ -29,6 +29,13 @@ pub fn handler(
     ctx: Context<UpdateExoLevercoinFees>,
     new_levercoin_fees: LevercoinFees,
 ) -> Result<UpdateLevercoinFeesEvent> {
-    let _ = (ctx, new_levercoin_fees);
-    todo!()
+    let pair = &mut ctx.accounts.exo_pair;
+    let old_levercoin_fees = pair.levercoin_fees;
+    pair.update_levercoin_fees(new_levercoin_fees)?;
+    let event = UpdateLevercoinFeesEvent {
+        old_levercoin_fees,
+        new_levercoin_fees: pair.levercoin_fees,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

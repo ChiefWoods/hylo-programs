@@ -21,6 +21,13 @@ pub fn handler(
     ctx: Context<UpdateLstSwapFee>,
     new_lst_swap_fee: UFixValue64,
 ) -> Result<UpdateFeeEvent> {
-    let _ = (ctx, new_lst_swap_fee);
-    todo!()
+    let hylo = &mut ctx.accounts.hylo;
+    let old_fee = hylo.lst_swap_fee;
+    hylo.update_lst_swap_fee(new_lst_swap_fee)?;
+    let event = UpdateFeeEvent {
+        old_fee,
+        new_fee: hylo.lst_swap_fee,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

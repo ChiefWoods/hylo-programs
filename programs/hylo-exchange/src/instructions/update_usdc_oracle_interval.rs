@@ -22,6 +22,13 @@ pub fn handler(
     ctx: Context<UpdateUsdcOracleInterval>,
     new_oracle_interval_secs: u64,
 ) -> Result<UpdateOracleIntervalEvent> {
-    let _ = (ctx, new_oracle_interval_secs);
-    todo!()
+    let pair = &mut ctx.accounts.usdc_pair;
+    let old_oracle_interval_secs = pair.oracle_interval_secs;
+    pair.update_oracle_interval(new_oracle_interval_secs)?;
+    let event = UpdateOracleIntervalEvent {
+        old_oracle_interval_secs,
+        new_oracle_interval_secs: pair.oracle_interval_secs,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

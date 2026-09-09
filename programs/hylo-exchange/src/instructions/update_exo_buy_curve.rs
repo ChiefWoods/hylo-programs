@@ -29,6 +29,13 @@ pub fn handler(
     ctx: Context<UpdateExoBuyCurve>,
     new_buy_curve_config: RebalanceCurveConfig,
 ) -> Result<UpdateRebalanceCurveConfigEvent> {
-    let _ = (ctx, new_buy_curve_config);
-    todo!()
+    let pair = &mut ctx.accounts.exo_pair;
+    let old_curve_config = pair.buy_curve_config;
+    pair.update_buy_curve(new_buy_curve_config)?;
+    let event = UpdateRebalanceCurveConfigEvent {
+        old_curve_config,
+        new_curve_config: pair.buy_curve_config,
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }
