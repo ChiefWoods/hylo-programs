@@ -33,7 +33,7 @@ pub struct InitializeLpTokenMint<'info> {
     #[account(mut)]
     pub lp_token_metadata: UncheckedAccount<'info>,
     /// CHECK: Metaplex Token Metadata program address is constrained below.
-    #[account(address = Pubkey::from_str("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s").unwrap())]
+    #[account(address = METAPLEX_TOKEN_METADATA)]
     pub metadata_program: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,

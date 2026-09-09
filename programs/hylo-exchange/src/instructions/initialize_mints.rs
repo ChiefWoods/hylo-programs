@@ -37,7 +37,7 @@ pub struct InitializeMints<'info> {
     #[account(mut)]
     pub levercoin_metadata: UncheckedAccount<'info>,
     /// CHECK: Metaplex Token Metadata program address is constrained below.
-    #[account(address = Pubkey::from_str("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s").unwrap())]
+    #[account(address = METAPLEX_TOKEN_METADATA)]
     pub metadata_program: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,

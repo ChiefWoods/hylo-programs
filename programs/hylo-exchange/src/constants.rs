@@ -55,4 +55,6 @@ pub const VAULT_AUTH: &[u8] = b"vault_auth";
 pub const XSOL: &[u8] = b"xSOL";
 
 // not imported from hylo-earn-pool due to circular dependency
-pub const HYLO_EARN_POOL: Pubkey = Pubkey::new_from_array([252,76,145,200,184,154,163,121,164,148,177,58,96,128,21,37,61,78,56,24,51,154,155,244,236,32,127,136,39,150,113,225]);
+pub const HYLO_EARN_POOL: Pubkey = Pubkey::from_str_const("HysTabVUfmQBFcmzu1ctRd1Y1fxd66RBpboy1bmtDSQQ");
+
+pub const METAPLEX_TOKEN_METADATA: Pubkey = Pubkey::from_str_const("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
