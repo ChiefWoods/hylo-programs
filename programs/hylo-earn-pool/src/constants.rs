@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
 
+// not included in IDL
+pub const MINT_AUTH: &[u8] = b"mint_auth";
+
 #[constant]
 pub const POOL_AUTH: &[u8] = b"pool_auth";
 

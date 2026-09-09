@@ -1,17 +1,21 @@
 use anchor_lang::prelude::*;
 
 #[allow(unused_imports)]
+use crate::constants::*;
 use crate::{events::*, state::*};
+use hylo_exchange::constants::HYLO;
 
 #[derive(Accounts)]
 pub struct UpdateWithdrawalFee<'info> {
-    /// CHECK: IDL metadata: signer; relations=hylo.
     pub admin: Signer<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[112,111,111,108,95,99,111,110,102,105,103]}]}.
-    #[account(mut)]
-    pub pool_config: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[104,121,108,111]}],"program":{"kind":"const","value":[245,187,72,160,4,116,48,134,197,164,152,189,233,219,27,124,201,65,103,243,58,82,140,90,13,150,83,40,223,158,124,33]}}.
-    pub hylo: UncheckedAccount<'info>,
+    #[account(mut, seeds = [POOL_CONFIG], bump)]
+    pub pool_config: Account<'info, PoolConfig>,
+    #[account(
+        seeds = [HYLO],
+        bump,
+        seeds::program = hylo_exchange::ID
+    )]
+    pub hylo: Account<'info, Hylo>,
 }
 
 pub fn handler(

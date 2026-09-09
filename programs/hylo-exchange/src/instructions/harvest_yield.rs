@@ -1,35 +1,63 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
-use hylo_earn_pool::program::HyloEarnPool;
+use anchor_spl::token::{Mint, Token, TokenAccount};
+
+use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
 #[derive(Accounts)]
 pub struct HarvestYield<'info> {
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[104,121,108,111]}]}.
-    #[account(mut)]
-    pub hylo: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; relations=hylo; pda={"seeds":[{"kind":"const","value":[104,121,85,83,68]}]}.
-    #[account(mut)]
-    pub stablecoin_mint: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[109,105,110,116,95,97,117,116,104]},{"kind":"account","path":"stablecoin_mint"}]}.
+    #[account(
+        mut,
+        seeds = [HYLO],
+        bump,
+        has_one = lst_registry,
+    )]
+    pub hylo: Account<'info, Hylo>,
+    #[account(mut, seeds = [HYUSD], bump)]
+    pub stablecoin_mint: Account<'info, Mint>,
+    /// CHECK: PDA is constrained by its seeds below.
+    #[account(
+        seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
+        bump,
+    )]
     pub stablecoin_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[102,101,101,95,97,117,116,104]},{"kind":"account","path":"stablecoin_mint"}]}.
+    /// CHECK: PDA is constrained by its seeds below.
+    #[account(
+        seeds = [FEE_AUTH, stablecoin_mint.key().as_ref()],
+        bump,
+    )]
     pub stablecoin_fee_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"account","path":"stablecoin_fee_auth"},{"kind":"const","value":[6,221,246,225,215,101,161,147,217,203,225,70,206,235,121,172,28,180,133,237,95,91,55,145,58,140,245,133,126,255,0,169]},{"kind":"account","path":"stablecoin_mint"}],"program":{"kind":"const","value":[140,151,37,143,78,36,137,241,187,61,16,41,20,142,13,131,11,90,19,153,218,255,16,132,4,142,123,216,219,233,248,89]}}.
-    #[account(mut)]
-    pub stablecoin_fee_vault: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"account","path":"pool_auth"},{"kind":"const","value":[6,221,246,225,215,101,161,147,217,203,225,70,206,235,121,172,28,180,133,237,95,91,55,145,58,140,245,133,126,255,0,169]},{"kind":"account","path":"stablecoin_mint"}],"program":{"kind":"const","value":[140,151,37,143,78,36,137,241,187,61,16,41,20,142,13,131,11,90,19,153,218,255,16,132,4,142,123,216,219,233,248,89]}}.
-    #[account(mut)]
-    pub stablecoin_pool: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[112,111,111,108,95,97,117,116,104]}],"program":{"kind":"account","path":"hylo_earn_pool"}}.
+    #[account(
+        mut,
+        associated_token::mint = stablecoin_mint,
+        associated_token::authority = stablecoin_fee_auth,
+        associated_token::token_program = token_program,
+    )]
+    pub stablecoin_fee_vault: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        associated_token::mint = stablecoin_mint,
+        associated_token::authority = pool_auth,
+        associated_token::token_program = token_program,
+    )]
+    pub stablecoin_pool: Account<'info, TokenAccount>,
+    /// CHECK: PDA is constrained by its seeds below.
+    #[account(
+        seeds = [POOL_AUTH],
+        bump,
+        seeds::program = HYLO_EARN_POOL
+    )]
     pub pool_auth: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: no additional constraints.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,
-    pub hylo_earn_pool: Program<'info, HyloEarnPool>,
+    /// CHECK: Hylo Earn Pool program address is constrained below.
+    #[account(address = HYLO_EARN_POOL)]
+    pub hylo_earn_pool: UncheckedAccount<'info>,
     /// CHECK: IDL metadata: relations=hylo.
     pub lst_registry: UncheckedAccount<'info>,
+    /// CHECK: Address Lookup Table program ID is constrained below.
     #[account(address = solana_sdk_ids::address_lookup_table::ID)]
     pub lut_program: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,

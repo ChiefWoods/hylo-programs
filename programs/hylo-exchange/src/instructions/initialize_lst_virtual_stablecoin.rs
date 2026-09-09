@@ -1,18 +1,19 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Mint;
+
+use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
 #[derive(Accounts)]
 pub struct InitializeLstVirtualStablecoin<'info> {
-    /// CHECK: IDL metadata: writable; signer; relations=hylo.
     #[account(mut)]
     pub admin: Signer<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[104,121,108,111]}]}.
-    #[account(mut)]
-    pub hylo: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: relations=hylo; pda={"seeds":[{"kind":"const","value":[104,121,85,83,68]}]}.
-    pub stablecoin_mint: UncheckedAccount<'info>,
+    #[account(mut, seeds = [HYLO], bump)]
+    pub hylo: Account<'info, Hylo>,
+    #[account(seeds = [HYUSD], bump)]
+    pub stablecoin_mint: Account<'info, Mint>,
 }
 
 pub fn handler(

@@ -1,18 +1,17 @@
 use anchor_lang::prelude::*;
+use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
 #[derive(Accounts)]
 pub struct CancelAddressUpdate<'info> {
-    /// CHECK: IDL metadata: writable; signer; relations=hylo.
     #[account(mut)]
     pub admin: Signer<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[104,121,108,111]}]}.
-    pub hylo: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[97,100,100,114,101,115,115,95,117,112,100,97,116,101,95,112,114,111,112,111,115,97,108]},{"kind":"arg","path":"address_field"}]}.
+    #[account(seeds = [HYLO], bump)]
+    pub hylo: Account<'info, Hylo>,
     #[account(mut)]
-    pub proposal: UncheckedAccount<'info>,
+    pub proposal: Account<'info, AddressUpdateProposal>,
 }
 
 pub fn handler(

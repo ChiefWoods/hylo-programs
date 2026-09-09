@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use crate::constants::*;
 
 use crate::program::HyloExchange;
 #[allow(unused_imports)]
@@ -6,14 +7,11 @@ use crate::state::*;
 
 #[derive(Accounts)]
 pub struct InitializeProtocol<'info> {
-    /// CHECK: IDL metadata: writable; signer.
     #[account(mut)]
     pub admin: Signer<'info>,
-    /// CHECK: IDL metadata: signer.
     pub upgrade_authority: Signer<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[104,121,108,111]}]}.
-    #[account(mut)]
-    pub hylo: UncheckedAccount<'info>,
+    #[account(mut, seeds = [HYLO], bump)]
+    pub hylo: Account<'info, Hylo>,
     /// CHECK: IDL metadata: no additional constraints.
     pub treasury: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,

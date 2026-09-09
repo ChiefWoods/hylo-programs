@@ -1,25 +1,44 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
 #[allow(unused_imports)]
+use crate::constants::*;
 use crate::{events::*, state::*};
+use hylo_exchange::constants::{HYLO, HYUSD, SETTLEMENT_AUTH};
 
 #[derive(Accounts)]
 pub struct AbsorbLoss<'info> {
-    /// CHECK: IDL metadata: signer; pda={"seeds":[{"kind":"const","value":[115,101,116,116,108,101,109,101,110,116,95,97,117,116,104]}],"program":{"kind":"const","value":[245,187,72,160,4,116,48,134,197,164,152,189,233,219,27,124,201,65,103,243,58,82,140,90,13,150,83,40,223,158,124,33]}}.
+    #[account(
+        seeds = [SETTLEMENT_AUTH],
+        bump,
+        seeds::program = hylo_exchange::ID
+    )]
     pub settlement_auth: Signer<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[104,121,108,111]}],"program":{"kind":"const","value":[245,187,72,160,4,116,48,134,197,164,152,189,233,219,27,124,201,65,103,243,58,82,140,90,13,150,83,40,223,158,124,33]}}.
-    pub hylo: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[112,111,111,108,95,99,111,110,102,105,103]}]}.
-    pub pool_config: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[112,111,111,108,95,97,117,116,104]}]}.
+    #[account(
+        seeds = [HYLO],
+        bump,
+        seeds::program = hylo_exchange::ID
+    )]
+    pub hylo: Account<'info, Hylo>,
+    #[account(seeds = [POOL_CONFIG], bump)]
+    pub pool_config: Account<'info, PoolConfig>,
+    /// CHECK: PDA is constrained by its fixed seed below.
+    #[account(seeds = [POOL_AUTH], bump)]
     pub pool_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"account","path":"pool_auth"},{"kind":"const","value":[6,221,246,225,215,101,161,147,217,203,225,70,206,235,121,172,28,180,133,237,95,91,55,145,58,140,245,133,126,255,0,169]},{"kind":"account","path":"stablecoin_mint"}],"program":{"kind":"const","value":[140,151,37,143,78,36,137,241,187,61,16,41,20,142,13,131,11,90,19,153,218,255,16,132,4,142,123,216,219,233,248,89]}}.
-    #[account(mut)]
-    pub stablecoin_pool: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[104,121,85,83,68]}],"program":{"kind":"const","value":[245,187,72,160,4,116,48,134,197,164,152,189,233,219,27,124,201,65,103,243,58,82,140,90,13,150,83,40,223,158,124,33]}}.
-    #[account(mut)]
-    pub stablecoin_mint: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        associated_token::mint = stablecoin_mint,
+        associated_token::authority = pool_auth,
+        associated_token::token_program = token_program,
+    )]
+    pub stablecoin_pool: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        seeds = [HYUSD],
+        bump,
+        seeds::program = hylo_exchange::ID
+    )]
+    pub stablecoin_mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,
 }
 

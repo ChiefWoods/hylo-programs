@@ -1435,6 +1435,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "hylo-exchange",
  "hylo-fix",
 ]
 
@@ -1444,7 +1445,6 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
- "hylo-earn-pool",
  "hylo-fix",
  "mollusk-svm",
  "solana-sdk-ids",

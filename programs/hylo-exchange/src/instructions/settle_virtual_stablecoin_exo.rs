@@ -1,41 +1,72 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
-use hylo_earn_pool::program::HyloEarnPool;
+use anchor_spl::token::{Mint, Token, TokenAccount};
+
+use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
 #[derive(Accounts)]
 pub struct SettleVirtualStablecoinExo<'info> {
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[104,121,108,111]}]}.
-    pub hylo: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[101,120,111,95,112,97,105,114]},{"kind":"account","path":"collateral_mint"}]}.
-    #[account(mut)]
-    pub exo_pair: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[112,111,111,108,95,99,111,110,102,105,103]}],"program":{"kind":"const","value":[252,76,145,200,184,154,163,121,164,148,177,58,96,128,21,37,61,78,56,24,51,154,155,244,236,32,127,136,39,150,113,225]}}.
+    #[account(seeds = [HYLO], bump)]
+    pub hylo: Account<'info, Hylo>,
+    #[account(
+        mut,
+        seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
+        bump,
+    )]
+    pub exo_pair: Account<'info, ExoPair>,
+    /// CHECK: PDA is constrained by its seeds below.
+    #[account(
+        seeds = [b"pool_config"],
+        bump,
+        seeds::program = HYLO_EARN_POOL
+    )]
     pub pool_config: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[115,101,116,116,108,101,109,101,110,116,95,97,117,116,104]}]}.
+    /// CHECK: PDA is constrained by its fixed seed below.
+    #[account(seeds = [SETTLEMENT_AUTH], bump)]
     pub settlement_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[109,105,110,116,95,97,117,116,104]},{"kind":"account","path":"stablecoin_mint"}]}.
+    /// CHECK: PDA is constrained by its seeds below.
+    #[account(
+        seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
+        bump,
+    )]
     pub stablecoin_mint_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[112,111,111,108,95,97,117,116,104]}],"program":{"kind":"const","value":[252,76,145,200,184,154,163,121,164,148,177,58,96,128,21,37,61,78,56,24,51,154,155,244,236,32,127,136,39,150,113,225]}}.
+    /// CHECK: PDA is constrained by its seeds below.
+    #[account(
+        seeds = [POOL_AUTH],
+        bump,
+        seeds::program = HYLO_EARN_POOL
+    )]
     pub pool_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[101,120,111,95,118,97,117,108,116,95,97,117,116,104]},{"kind":"account","path":"collateral_mint"}]}.
+    /// CHECK: PDA is constrained by its seeds below.
+    #[account(
+        seeds = [EXO_VAULT_AUTH, collateral_mint.key().as_ref()],
+        bump,
+    )]
     pub vault_auth: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"account","path":"pool_auth"},{"kind":"const","value":[6,221,246,225,215,101,161,147,217,203,225,70,206,235,121,172,28,180,133,237,95,91,55,145,58,140,245,133,126,255,0,169]},{"kind":"account","path":"stablecoin_mint"}],"program":{"kind":"const","value":[140,151,37,143,78,36,137,241,187,61,16,41,20,142,13,131,11,90,19,153,218,255,16,132,4,142,123,216,219,233,248,89]}}.
-    #[account(mut)]
-    pub stablecoin_pool: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"account","path":"vault_auth"},{"kind":"const","value":[6,221,246,225,215,101,161,147,217,203,225,70,206,235,121,172,28,180,133,237,95,91,55,145,58,140,245,133,126,255,0,169]},{"kind":"account","path":"collateral_mint"}],"program":{"kind":"const","value":[140,151,37,143,78,36,137,241,187,61,16,41,20,142,13,131,11,90,19,153,218,255,16,132,4,142,123,216,219,233,248,89]}}.
-    pub collateral_vault: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: relations=exo_pair.
-    pub collateral_mint: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[104,121,85,83,68]}]}.
-    #[account(mut)]
-    pub stablecoin_mint: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        associated_token::mint = stablecoin_mint,
+        associated_token::authority = pool_auth,
+        associated_token::token_program = token_program,
+    )]
+    pub stablecoin_pool: Account<'info, TokenAccount>,
+    #[account(
+        associated_token::mint = collateral_mint,
+        associated_token::authority = vault_auth,
+        associated_token::token_program = token_program,
+    )]
+    pub collateral_vault: Account<'info, TokenAccount>,
+    pub collateral_mint: Account<'info, Mint>,
+    #[account(mut, seeds = [HYUSD], bump)]
+    pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: IDL metadata: no additional constraints.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
-    pub earn_pool: Program<'info, HyloEarnPool>,
+    /// CHECK: Hylo Earn Pool program address is constrained below.
+    #[account(address = HYLO_EARN_POOL)]
+    pub earn_pool: UncheckedAccount<'info>,
 }
 
 pub fn handler(

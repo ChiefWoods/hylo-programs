@@ -1,15 +1,14 @@
 use anchor_lang::prelude::*;
+use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
 #[derive(Accounts)]
 pub struct UpdateLstStablecoinMintThreshold<'info> {
-    /// CHECK: IDL metadata: signer; relations=hylo.
     pub admin: Signer<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[104,121,108,111]}]}.
-    #[account(mut)]
-    pub hylo: UncheckedAccount<'info>,
+    #[account(mut, seeds = [HYLO], bump)]
+    pub hylo: Account<'info, Hylo>,
 }
 
 pub fn handler(

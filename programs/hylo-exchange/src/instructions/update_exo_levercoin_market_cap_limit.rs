@@ -1,19 +1,22 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Mint;
+use crate::constants::*;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
 
 #[derive(Accounts)]
 pub struct UpdateExoLevercoinMarketCapLimit<'info> {
-    /// CHECK: IDL metadata: signer; relations=hylo.
     pub admin: Signer<'info>,
-    /// CHECK: IDL metadata: pda={"seeds":[{"kind":"const","value":[104,121,108,111]}]}.
-    pub hylo: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: writable; pda={"seeds":[{"kind":"const","value":[101,120,111,95,112,97,105,114]},{"kind":"account","path":"collateral_mint"}]}.
-    #[account(mut)]
-    pub exo_pair: UncheckedAccount<'info>,
-    /// CHECK: IDL metadata: relations=exo_pair.
-    pub collateral_mint: UncheckedAccount<'info>,
+    #[account(seeds = [HYLO], bump)]
+    pub hylo: Account<'info, Hylo>,
+    #[account(
+        mut,
+        seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
+        bump,
+    )]
+    pub exo_pair: Account<'info, ExoPair>,
+    pub collateral_mint: Account<'info, Mint>,
 }
 
 pub fn handler(
