@@ -16,9 +16,9 @@ pub struct ApproveAddressUpdate<'info> {
         has_one = new_address,
         seeds = [ADDRESS_UPDATE_PROPOSAL, &[address_field.clone() as u8]],
         bump,
-        constraint = proposal.address_field == address_field,
+        constraint = proposal.load()?.address_field == address_field,
     )]
-    pub proposal: Account<'info, AddressUpdateProposal>,
+    pub proposal: AccountLoader<'info, AddressUpdateProposal>,
     /// CHECK: IDL metadata: relations=proposal.
     pub new_address: UncheckedAccount<'info>,
     #[account(
@@ -35,13 +35,13 @@ pub fn handler(
     ctx: Context<ApproveAddressUpdate>,
     address_field: AddressField,
 ) -> Result<ApproveAddressUpdateEvent> {
-    ctx.accounts
-        .proposal
-        .approve(Clock::get()?.unix_timestamp)?;
+    let mut proposal = ctx.accounts.proposal.load_mut()?;
+
+    proposal.approve(Clock::get()?.unix_timestamp)?;
 
     let event = ApproveAddressUpdateEvent {
         address_field,
-        new_address: ctx.accounts.proposal.new_address,
+        new_address: proposal.new_address,
     };
     emit_cpi!(event.clone());
     Ok(event)

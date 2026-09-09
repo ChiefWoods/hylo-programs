@@ -14,14 +14,14 @@ pub struct UpdateLstRebalanceFee<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [LST_HEADER, lst_mint.key().as_ref()],
         bump,
-        constraint = lst_header.mint == lst_mint.key(),
+        constraint = lst_header.load()?.mint == lst_mint.key(),
     )]
-    pub lst_header: Account<'info, LstHeader>,
+    pub lst_header: AccountLoader<'info, LstHeader>,
     pub lst_mint: Account<'info, Mint>,
 }
 
@@ -29,7 +29,7 @@ pub fn handler(
     ctx: Context<UpdateLstRebalanceFee>,
     new_rebalance_fee: UFixValue64,
 ) -> Result<UpdateLstRebalanceFeeEvent> {
-    let header = &mut ctx.accounts.lst_header;
+    let header = &mut ctx.accounts.lst_header.load_mut()?;
     let old_rebalance_fee = header.rebalance_fee;
     header.update_rebalance_fee(new_rebalance_fee)?;
     let event = UpdateLstRebalanceFeeEvent {

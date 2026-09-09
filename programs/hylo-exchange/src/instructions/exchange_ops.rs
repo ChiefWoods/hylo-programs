@@ -36,7 +36,8 @@ pub(crate) fn load_exo_price_update(
     exo_pair: &ExoPair,
 ) -> Result<PriceUpdateV2> {
     require_keys_eq!(feed.key(), exo_pair.oracle, ErrorCode::ExoOracleInvalid);
-    load_price_update(feed, &exo_pair.oracle_feed_id).map_err(|_| error!(ErrorCode::ExoOracleInvalid))
+    load_price_update(feed, &exo_pair.oracle_feed_id)
+        .map_err(|_| error!(ErrorCode::ExoOracleInvalid))
 }
 
 pub(crate) fn load_exo_exchange<C: SolanaClock>(

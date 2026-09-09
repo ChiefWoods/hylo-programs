@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 
 use super::*;
 
-#[account]
-#[derive(InitSpace)]
+#[account(zero_copy(unsafe))]
+#[repr(C)]
 pub struct AddressUpdateProposal {
     pub address_field: AddressField,
     pub new_address: Pubkey,

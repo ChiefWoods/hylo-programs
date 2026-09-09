@@ -28,15 +28,15 @@ pub struct ConvertLeverToStableLst<'info> {
         has_one = stablecoin_mint,
         has_one = levercoin_mint,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
@@ -59,12 +59,12 @@ pub struct ConvertLeverToStableLst<'info> {
         token::token_program = token_program,
     )]
     pub user_stablecoin_ta: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [XSOL], bump = hylo.levercoin_mint_bump)]
+    #[account(mut, seeds = [XSOL], bump = hylo.load()?.levercoin_mint_bump)]
     pub levercoin_mint: Account<'info, Mint>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, levercoin_mint.key().as_ref()],
-        bump = hylo.levercoin_auth_bump,
+        bump = hylo.load()?.levercoin_auth_bump,
     )]
     pub levercoin_auth: UncheckedAccount<'info>,
     #[account(
@@ -82,25 +82,27 @@ pub fn handler(
     amount_levercoin: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<ConvertLeverToStableLstEvent> {
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
     require!(amount_levercoin > 0, CoreError::ZeroAmount);
     let clock = Clock::get()?;
-    lst_user_gates(&ctx.accounts.hylo, clock.epoch)?;
+    lst_user_gates(&hylo, clock.epoch)?;
 
     let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
     let exchange = LstExchangeContext::load(
         clock,
-        &ctx.accounts.hylo.total_sol_cache,
-        ctx.accounts.hylo.stablecoin_mint_threshold()?,
-        ctx.accounts.hylo.oracle_config()?,
-        ctx.accounts.hylo.levercoin_fees,
+        &hylo.total_sol_cache,
+        hylo.stablecoin_mint_threshold()?,
+        hylo.oracle_config()?,
+        hylo.levercoin_fees,
         &price_update,
-        ctx.accounts.hylo.virtual_stablecoin,
+        hylo.virtual_stablecoin,
         Some(&ctx.accounts.levercoin_mint),
-        ctx.accounts.hylo.lst_sell_curve_config,
-        ctx.accounts.hylo.lst_buy_curve_config,
+        hylo.lst_sell_curve_config,
+        hylo.lst_buy_curve_config,
     )?;
     require!(
         exchange.rebalance_mode() != hylo_core::rebalance::mode::RebalanceMode::Depeg,
@@ -108,7 +110,10 @@ pub fn handler(
     );
 
     let burned = UFix64::<N6>::new(amount_levercoin);
-    require!(burned <= exchange.levercoin_supply()?, CoreError::ZeroAmount);
+    require!(
+        burned <= exchange.levercoin_supply()?,
+        CoreError::ZeroAmount
+    );
     let levercoin_nav = exchange.levercoin_redeem_nav()?;
     let stablecoin_nav = exchange.stablecoin_nav()?;
     let gross = exchange
@@ -138,7 +143,7 @@ pub fn handler(
         ctx.accounts.fee_vault.to_account_info(),
         ctx.accounts.stablecoin_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         fees_extracted.bits,
     )?;
     mint_stablecoin(
@@ -147,11 +152,11 @@ pub fn handler(
         ctx.accounts.user_stablecoin_ta.to_account_info(),
         ctx.accounts.stablecoin_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         amount_remaining.bits,
     )?;
 
-    ctx.accounts.hylo.virtual_stablecoin.mint(gross)?;
+    hylo.virtual_stablecoin.mint(gross)?;
 
     let event = ConvertLeverToStableLstEvent {
         levercoin_burned: burned.into(),

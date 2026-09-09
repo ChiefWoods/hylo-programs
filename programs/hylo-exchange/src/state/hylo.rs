@@ -8,8 +8,8 @@ use hylo_core::{
 
 use super::*;
 
-#[account]
-#[derive(InitSpace)]
+#[account(zero_copy(unsafe))]
+#[repr(C)]
 pub struct Hylo {
     pub admin: Pubkey,
     pub treasury: Pubkey,

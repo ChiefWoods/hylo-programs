@@ -24,7 +24,8 @@ pub struct TokenMetadata {
 /// This remains local because `hylo_core::limiter::withdraw::WithdrawalLimiter::new`
 /// is gated behind `offchain`, whose dependency graph cannot build for SBF. Keep this
 /// implementation aligned with the core limiter while allowing onchain initialization.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, InitSpace)]
+#[repr(C)]
 pub struct WithdrawalLimiter {
     pub limit: UFixValue64,
     withdrawal_ledger: VirtualStablecoin,

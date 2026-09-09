@@ -16,8 +16,8 @@ pub struct InitializeProtocol<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     pub upgrade_authority: Signer<'info>,
-    #[account(init, payer = admin, space = Hylo::DISCRIMINATOR.len() + Hylo::INIT_SPACE, seeds = [HYLO], bump)]
-    pub hylo: Account<'info, Hylo>,
+    #[account(init, payer = admin, space = Hylo::DISCRIMINATOR.len() + core::mem::size_of::<Hylo>(), seeds = [HYLO], bump)]
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: IDL metadata: no additional constraints.
     pub treasury: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
@@ -54,7 +54,7 @@ pub fn handler(
     };
     yield_harvest_cache.init(current_epoch)?;
 
-    ctx.accounts.hylo.set_inner(Hylo {
+    *ctx.accounts.hylo.load_init()? = Hylo {
         admin: ctx.accounts.admin.key(),
         treasury: ctx.accounts.treasury.key(),
         lst_registry: Pubkey::default(),
@@ -89,7 +89,7 @@ pub fn handler(
         _unused_2: zero_pct,
         pool_drawdown: PoolDrawdown::default(),
         _reserved: [0; 13],
-    });
+    };
 
     Ok(())
 }

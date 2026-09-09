@@ -92,10 +92,7 @@ pub fn extend_lookup_table<'info>(
 /// 1 LST in native 9-decimal atoms, used as the Sanctum `LstToSol` quote size.
 pub const LST_TO_SOL_AMOUNT: u64 = 1_000_000_000;
 
-pub fn remaining_matches_table(
-    registry_data: &[u8],
-    remaining: &[AccountInfo],
-) -> Result<()> {
+pub fn remaining_matches_table(registry_data: &[u8], remaining: &[AccountInfo]) -> Result<()> {
     let table = load_table(registry_data)?;
     require!(
         remaining.len() == table.addresses.len(),
@@ -200,10 +197,15 @@ pub fn load_header(info: &AccountInfo) -> Result<LstHeader> {
 pub fn save_header(info: &AccountInfo, header: &LstHeader) -> Result<()> {
     require!(info.is_writable, ErrorCode::LstBlockInvalid);
     let mut data = info.try_borrow_mut_data()?;
-    let mut slice: &mut [u8] = &mut data;
-    header
-        .try_serialize(&mut slice)
-        .map_err(|_| error!(ErrorCode::LstBlockInvalid))
+    let disc = LstHeader::DISCRIMINATOR;
+    require!(
+        data.len() >= disc.len() + core::mem::size_of::<LstHeader>(),
+        ErrorCode::LstBlockInvalid
+    );
+    data[..disc.len()].copy_from_slice(disc.as_ref());
+    let body = bytemuck::bytes_of(header);
+    data[disc.len()..disc.len() + body.len()].copy_from_slice(body);
+    Ok(())
 }
 
 pub fn load_vault(info: &AccountInfo) -> Result<TokenAccount> {

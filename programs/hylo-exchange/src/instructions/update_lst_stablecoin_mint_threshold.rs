@@ -14,14 +14,14 @@ pub struct UpdateLstStablecoinMintThreshold<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(
     ctx: Context<UpdateLstStablecoinMintThreshold>,
     new_stablecoin_mint_threshold: UFixValue64,
 ) -> Result<UpdateStablecoinMintThresholdEvent> {
-    let hylo = &mut ctx.accounts.hylo;
+    let hylo = &mut ctx.accounts.hylo.load_mut()?;
     let old_stablecoin_mint_threshold = hylo.stablecoin_mint_threshold;
     hylo.update_stablecoin_mint_threshold(new_stablecoin_mint_threshold)?;
     let event = UpdateStablecoinMintThresholdEvent {

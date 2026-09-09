@@ -14,14 +14,14 @@ pub struct UpdateYieldHarvestConfig<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(
     ctx: Context<UpdateYieldHarvestConfig>,
     new_yield_harvest_config: YieldHarvestConfig,
 ) -> Result<UpdateYieldHarvestConfigEvent> {
-    let hylo = &mut ctx.accounts.hylo;
+    let hylo = &mut ctx.accounts.hylo.load_mut()?;
     let old_yield_harvest_config = hylo.yield_harvest_config;
     hylo.update_yield_harvest_config(new_yield_harvest_config)?;
     let event = UpdateYieldHarvestConfigEvent {

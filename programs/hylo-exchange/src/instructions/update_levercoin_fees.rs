@@ -14,14 +14,14 @@ pub struct UpdateLevercoinFees<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(
     ctx: Context<UpdateLevercoinFees>,
     new_levercoin_fees: LevercoinFees,
 ) -> Result<UpdateLevercoinFeesEvent> {
-    let hylo = &mut ctx.accounts.hylo;
+    let hylo = &mut ctx.accounts.hylo.load_mut()?;
     let old_levercoin_fees = hylo.levercoin_fees;
     hylo.update_levercoin_fees(new_levercoin_fees)?;
     let event = UpdateLevercoinFeesEvent {

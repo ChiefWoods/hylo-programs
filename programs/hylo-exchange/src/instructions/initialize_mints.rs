@@ -18,7 +18,7 @@ pub struct InitializeMints<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
@@ -136,7 +136,7 @@ pub fn handler(
         None,
     )?;
 
-    let hylo = &mut ctx.accounts.hylo;
+    let hylo = &mut ctx.accounts.hylo.load_mut()?;
     hylo.stablecoin_mint = stablecoin_mint_key;
     hylo.stablecoin_mint_bump = ctx.bumps.stablecoin_mint;
     hylo.stablecoin_auth_bump = ctx.bumps.stablecoin_auth;

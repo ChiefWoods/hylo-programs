@@ -14,14 +14,14 @@ pub struct UpdateExoBorrowRateFee<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     pub collateral_mint: Account<'info, Mint>,
 }
 
@@ -29,7 +29,7 @@ pub fn handler(
     ctx: Context<UpdateExoBorrowRateFee>,
     new_borrow_rate_fee: UFixValue64,
 ) -> Result<UpdateFeeEvent> {
-    let pair = &mut ctx.accounts.exo_pair;
+    let pair = &mut ctx.accounts.exo_pair.load_mut()?;
     let old_fee = pair.borrow_rate_fee;
     pair.update_borrow_rate_fee(new_borrow_rate_fee)?;
     let event = UpdateFeeEvent {

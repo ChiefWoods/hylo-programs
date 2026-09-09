@@ -17,7 +17,7 @@ pub struct InitializeLstRegistry<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: PDA is constrained by its fixed seed below.
     #[account(seeds = [LST_REGISTRY_AUTH], bump)]
     pub registry_auth: UncheckedAccount<'info>,
@@ -31,7 +31,7 @@ pub struct InitializeLstRegistry<'info> {
 }
 
 pub fn handler(ctx: Context<InitializeLstRegistry>, slot: u64) -> Result<()> {
-    let hylo = &mut ctx.accounts.hylo;
+    let hylo = &mut ctx.accounts.hylo.load_mut()?;
     require!(
         hylo.lst_registry == Pubkey::default(),
         ErrorCode::LstRegistryAlreadyInitialized

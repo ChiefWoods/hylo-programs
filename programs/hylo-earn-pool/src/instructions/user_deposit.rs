@@ -21,16 +21,16 @@ pub struct UserDeposit<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(seeds = [POOL_CONFIG], bump)]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     #[account(
         seeds = [&HYLO],
         bump,
         seeds::program = crate::hylo_exchange::ID
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         seeds = [&HYUSD],
-        bump = hylo.stablecoin_mint_bump,
+        bump = hylo.load()?.stablecoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
@@ -49,7 +49,7 @@ pub struct UserDeposit<'info> {
     )]
     pub user_lp_token_ta: Account<'info, TokenAccount>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [POOL_AUTH], bump = pool_config.pool_auth_bump)]
+    #[account(seeds = [POOL_AUTH], bump = pool_config.load()?.pool_auth_bump)]
     pub pool_auth: UncheckedAccount<'info>,
     #[account(
         mut,
@@ -61,10 +61,10 @@ pub struct UserDeposit<'info> {
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [&MINT_AUTH, lp_token_mint.key().as_ref()],
-        bump = pool_config.lp_token_auth_bump,
+        bump = pool_config.load()?.lp_token_auth_bump,
     )]
     pub lp_token_auth: UncheckedAccount<'info>,
-    #[account(mut, seeds = [STAKED_HYUSD], bump = pool_config.lp_token_mint_bump)]
+    #[account(mut, seeds = [STAKED_HYUSD], bump = pool_config.load()?.lp_token_mint_bump)]
     pub lp_token_mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,
 }
@@ -74,11 +74,11 @@ pub fn handler(
     amount_stablecoin: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<UserDepositEvent> {
-    require!(
-        !ctx.accounts.hylo.protocol_paused,
-        ErrorCode::ProtocolPaused
-    );
-    require!(!ctx.accounts.pool_config.paused, ErrorCode::EarnPoolPaused);
+    let hylo = ctx.accounts.hylo.load()?;
+    let pool_config = ctx.accounts.pool_config.load()?;
+
+    require!(!hylo.protocol_paused, ErrorCode::ProtocolPaused);
+    require!(!pool_config.paused, ErrorCode::EarnPoolPaused);
     require!(amount_stablecoin > 0, CoreError::ZeroAmount);
 
     let pool_amount = UFix64::<N6>::new(ctx.accounts.stablecoin_pool.amount);
@@ -89,8 +89,7 @@ pub fn handler(
     );
 
     let deposit = UFix64::<N6>::new(amount_stablecoin);
-    ctx.accounts
-        .pool_config
+    pool_config
         .deposit_limiter
         .validate_deposit(pool_amount, deposit)?;
 
@@ -112,7 +111,7 @@ pub fn handler(
     )?;
 
     let lp_token_mint_key = ctx.accounts.lp_token_mint.key();
-    let lp_token_auth_bump = [ctx.accounts.pool_config.lp_token_auth_bump];
+    let lp_token_auth_bump = [pool_config.lp_token_auth_bump];
     let lp_token_auth_seeds: &[&[u8]] =
         &[&MINT_AUTH, lp_token_mint_key.as_ref(), &lp_token_auth_bump];
     token_ops::mint_to_pda(

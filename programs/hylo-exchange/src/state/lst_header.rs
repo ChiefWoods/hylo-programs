@@ -6,8 +6,8 @@ use super::*;
 
 /// Header for a specific LST. Should be the first entry in the block of
 /// accounts, and contains references to the rest of the accounts.
-#[account]
-#[derive(InitSpace)]
+#[account(zero_copy(unsafe))]
+#[repr(C)]
 pub struct LstHeader {
     pub mint: Pubkey,
     pub vault: Pubkey,

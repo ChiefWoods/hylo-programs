@@ -10,21 +10,21 @@ use crate::{events::*, state::*};
 pub struct UpdateWithdrawalFee<'info> {
     pub admin: Signer<'info>,
     #[account(mut, seeds = [POOL_CONFIG], bump)]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     #[account(
         seeds = [&HYLO],
         bump,
         seeds::program = crate::hylo_exchange::ID,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(
     ctx: Context<UpdateWithdrawalFee>,
     new_withdrawal_fee: UFixValue64,
 ) -> Result<UpdateWithdrawalFeeEvent> {
-    let config = &mut ctx.accounts.pool_config;
+    let config = &mut ctx.accounts.pool_config.load_mut()?;
     let old_withdrawal_fee = config.withdrawal_fee;
     config.update_withdrawal_fee(new_withdrawal_fee)?;
     let event = UpdateWithdrawalFeeEvent {

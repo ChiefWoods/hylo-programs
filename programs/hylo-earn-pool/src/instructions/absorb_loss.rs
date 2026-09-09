@@ -25,11 +25,11 @@ pub struct AbsorbLoss<'info> {
         bump,
         seeds::program = crate::hylo_exchange::ID
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(seeds = [POOL_CONFIG], bump)]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [POOL_AUTH], bump = pool_config.pool_auth_bump)]
+    #[account(seeds = [POOL_AUTH], bump = pool_config.load()?.pool_auth_bump)]
     pub pool_auth: UncheckedAccount<'info>,
     #[account(
         mut,
@@ -41,7 +41,7 @@ pub struct AbsorbLoss<'info> {
     #[account(
         mut,
         seeds = [&HYUSD],
-        bump = hylo.stablecoin_mint_bump,
+        bump = hylo.load()?.stablecoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
@@ -49,10 +49,12 @@ pub struct AbsorbLoss<'info> {
 }
 
 pub fn handler(ctx: Context<AbsorbLoss>, amount: u64) -> Result<AbsorbLossEvent> {
+    let pool_config = ctx.accounts.pool_config.load()?;
+
     let burned = amount.min(ctx.accounts.stablecoin_pool.amount);
     let remaining = ctx.accounts.stablecoin_pool.amount.saturating_sub(burned);
 
-    let pool_auth_bump = [ctx.accounts.pool_config.pool_auth_bump];
+    let pool_auth_bump = [pool_config.pool_auth_bump];
     let pool_auth_seeds: &[&[u8]] = &[POOL_AUTH, &pool_auth_bump];
     token_ops::burn_pda(
         ctx.accounts.token_program.to_account_info(),

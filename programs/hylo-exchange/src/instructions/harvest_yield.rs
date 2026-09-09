@@ -23,13 +23,13 @@ pub struct HarvestYield<'info> {
         has_one = lst_registry,
         has_one = stablecoin_mint,
     )]
-    pub hylo: Account<'info, Hylo>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
+    pub hylo: AccountLoader<'info, Hylo>,
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
@@ -76,6 +76,8 @@ pub struct HarvestYield<'info> {
 }
 
 pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
@@ -83,10 +85,10 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
     let clock = Clock::get()?;
     let epoch = clock.epoch;
     require!(
-        ctx.accounts.hylo.yield_harvest_cache.is_stale(epoch),
+        hylo.yield_harvest_cache.is_stale(epoch),
         ErrorCode::YieldHarvestAlreadyRun
     );
-    ctx.accounts.hylo.total_sol_cache.get_validated(epoch)?;
+    hylo.total_sol_cache.get_validated(epoch)?;
 
     lst_registry::remaining_matches_table(
         &ctx.accounts.lst_registry.try_borrow_data()?,
@@ -94,7 +96,7 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
     )?;
 
     let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
-    let sol_usd = query_pyth_oracle(&clock, &price_update, ctx.accounts.hylo.oracle_config()?)?;
+    let sol_usd = query_pyth_oracle(&clock, &price_update, hylo.oracle_config()?)?;
 
     let blocks = &ctx.remaining_accounts[LST_REGISTRY_CALCULATOR_PREAMBLE_LEN..];
     let mut total_sol_harvested = UFix64::<N9>::zero();
@@ -114,10 +116,7 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
             *pool_state_info.key,
             ErrorCode::LstBlockInvalid
         );
-        require!(
-            header.price_sol.epoch == epoch,
-            ErrorCode::LstPriceOutdated
-        );
+        require!(header.price_sol.epoch == epoch, ErrorCode::LstPriceOutdated);
 
         if header.prev_price_sol.epoch < header.price_sol.epoch {
             let delta = header
@@ -144,8 +143,8 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
         .checked_convert()
         .ok_or_else(|| error!(ErrorCode::TokenAmountPrecisionError))?;
 
-    let allocated = ctx.accounts.hylo.yield_harvest_config.apply_allocation(usd_yield)?;
-    let extract = ctx.accounts.hylo.yield_harvest_config.apply_fee(allocated)?;
+    let allocated = hylo.yield_harvest_config.apply_allocation(usd_yield)?;
+    let extract = hylo.yield_harvest_config.apply_fee(allocated)?;
 
     mint_stablecoin(
         ctx.accounts.token_program.to_account_info(),
@@ -153,7 +152,7 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
         ctx.accounts.stablecoin_fee_vault.to_account_info(),
         ctx.accounts.stablecoin_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         extract.fees_extracted.bits,
     )?;
     mint_stablecoin(
@@ -162,7 +161,7 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
         ctx.accounts.stablecoin_pool.to_account_info(),
         ctx.accounts.stablecoin_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         extract.amount_remaining.bits,
     )?;
 
@@ -171,10 +170,9 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
         .checked_add(&extract.amount_remaining)
         .ok_or_else(|| error!(ErrorCode::LstAdditionOverflow))?;
     if minted > UFix64::zero() {
-        ctx.accounts.hylo.virtual_stablecoin.mint(minted)?;
+        hylo.virtual_stablecoin.mint(minted)?;
     }
-    let pool_drawdown_repaid =
-        drawdown_repay(&mut ctx.accounts.hylo.pool_drawdown, extract.amount_remaining)?;
+    let pool_drawdown_repaid = drawdown_repay(&mut hylo.pool_drawdown, extract.amount_remaining)?;
     let net_to_pool = extract
         .amount_remaining
         .checked_sub(&pool_drawdown_repaid)
@@ -186,9 +184,7 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
             .amount
             .saturating_add(extract.amount_remaining.bits),
     );
-    ctx.accounts
-        .hylo
-        .yield_harvest_cache
+    hylo.yield_harvest_cache
         .update(pool_balance, net_to_pool, epoch)?;
 
     let event = HarvestYieldEvent {

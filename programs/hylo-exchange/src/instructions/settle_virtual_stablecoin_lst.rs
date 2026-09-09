@@ -19,26 +19,26 @@ use crate::{events::*, state::*};
 #[derive(Accounts)]
 pub struct SettleVirtualStablecoinLst<'info> {
     #[account(mut, seeds = [HYLO], bump)]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         seeds = [&POOL_CONFIG],
         bump,
         seeds::program = HYLO_EARN_POOL
     )]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its fixed seed below.
     #[account(seeds = [SETTLEMENT_AUTH], bump)]
     pub settlement_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_mint_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [POOL_AUTH],
-        bump = pool_config.pool_auth_bump,
+        bump = pool_config.load()?.pool_auth_bump,
         seeds::program = HYLO_EARN_POOL
     )]
     pub pool_auth: UncheckedAccount<'info>,
@@ -49,7 +49,7 @@ pub struct SettleVirtualStablecoinLst<'info> {
         associated_token::token_program = token_program,
     )]
     pub stablecoin_pool: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,
@@ -62,6 +62,8 @@ pub struct SettleVirtualStablecoinLst<'info> {
 pub fn handler(
     ctx: Context<SettleVirtualStablecoinLst>,
 ) -> Result<SettleVirtualStablecoinLstEvent> {
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
@@ -70,39 +72,42 @@ pub fn handler(
     let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
     let exchange = LstExchangeContext::load(
         clock,
-        &ctx.accounts.hylo.total_sol_cache,
-        ctx.accounts.hylo.stablecoin_mint_threshold()?,
-        ctx.accounts.hylo.oracle_config()?,
-        ctx.accounts.hylo.levercoin_fees,
+        &hylo.total_sol_cache,
+        hylo.stablecoin_mint_threshold()?,
+        hylo.oracle_config()?,
+        hylo.levercoin_fees,
         &price_update,
-        ctx.accounts.hylo.virtual_stablecoin,
+        hylo.virtual_stablecoin,
         None,
-        ctx.accounts.hylo.lst_sell_curve_config,
-        ctx.accounts.hylo.lst_buy_curve_config,
+        hylo.lst_sell_curve_config,
+        hylo.lst_buy_curve_config,
     )?;
 
     let tvl = exchange
         .total_value_locked()?
         .checked_convert::<N6>()
         .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinConversion))?;
-    let virtual_supply = ctx.accounts.hylo.virtual_stablecoin.supply()?;
+    let virtual_supply = hylo.virtual_stablecoin.supply()?;
 
     let (stablecoin_burned, stablecoin_minted) = if tvl > virtual_supply {
         let surplus = tvl
             .checked_sub(&virtual_supply)
             .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinUnderflow))?;
-        require!(surplus > UFix64::zero(), ErrorCode::SettleVirtualStablecoinNoop);
+        require!(
+            surplus > UFix64::zero(),
+            ErrorCode::SettleVirtualStablecoinNoop
+        );
         mint_stablecoin(
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.stablecoin_mint.to_account_info(),
             ctx.accounts.stablecoin_pool.to_account_info(),
             ctx.accounts.stablecoin_mint_auth.to_account_info(),
             ctx.accounts.stablecoin_mint.key(),
-            ctx.accounts.hylo.stablecoin_auth_bump,
+            hylo.stablecoin_auth_bump,
             surplus.bits,
         )?;
-        ctx.accounts.hylo.virtual_stablecoin.mint(surplus)?;
-        drawdown_repay(&mut ctx.accounts.hylo.pool_drawdown, surplus)?;
+        hylo.virtual_stablecoin.mint(surplus)?;
+        drawdown_repay(&mut hylo.pool_drawdown, surplus)?;
         (UFix64::zero(), surplus)
     } else if virtual_supply > tvl {
         let overhang = virtual_supply
@@ -113,7 +118,11 @@ pub fn handler(
             .unwrap_or_else(UFix64::zero);
         let pool = UFix64::<N6>::new(ctx.accounts.stablecoin_pool.amount);
         let burned = overhang.min(max_burn).min(pool);
-        require!(burned > UFix64::zero(), ErrorCode::SettleVirtualStablecoinNoop);
+        require!(
+            burned > UFix64::zero(),
+            ErrorCode::SettleVirtualStablecoinNoop
+        );
+        drop(hylo);
         absorb_loss(
             ctx.accounts.earn_pool.to_account_info(),
             ctx.accounts.settlement_auth.to_account_info(),
@@ -126,11 +135,9 @@ pub fn handler(
             ctx.bumps.settlement_auth,
             burned.bits,
         )?;
-        ctx.accounts
-            .hylo
-            .virtual_stablecoin
-            .burn_limited(burned, SUPPLY_FLOOR)?;
-        ctx.accounts.hylo.pool_drawdown.drawdown(burned)?;
+        hylo = ctx.accounts.hylo.load_mut()?;
+        hylo.virtual_stablecoin.burn_limited(burned, SUPPLY_FLOOR)?;
+        hylo.pool_drawdown.drawdown(burned)?;
         (burned, UFix64::zero())
     } else {
         return err!(ErrorCode::SettleVirtualStablecoinNoop);
@@ -151,8 +158,8 @@ pub fn handler(
     let event = SettleVirtualStablecoinLstEvent {
         stablecoin_burned: stablecoin_burned.into(),
         stablecoin_minted: stablecoin_minted.into(),
-        virtual_stablecoin_supply: ctx.accounts.hylo.virtual_stablecoin.supply()?.into(),
-        pool_drawdown_outstanding: ctx.accounts.hylo.pool_drawdown.outstanding()?.into(),
+        virtual_stablecoin_supply: hylo.virtual_stablecoin.supply()?.into(),
+        pool_drawdown_outstanding: hylo.pool_drawdown.outstanding()?.into(),
         pool_balance: UFix64::<N6>::new(pool_balance).into(),
     };
     emit_cpi!(event.clone());

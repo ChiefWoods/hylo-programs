@@ -19,7 +19,7 @@ pub struct UpdateLstPrices<'info> {
         bump,
         has_one = lst_registry,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: Validated owner.
     #[account(
         mut,
@@ -32,6 +32,8 @@ pub struct UpdateLstPrices<'info> {
 }
 
 pub fn handler(ctx: Context<UpdateLstPrices>) -> Result<UpdateLstPricesEvent> {
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
     let epoch = Clock::get()?.epoch;
     lst_registry::remaining_matches_table(
         &ctx.accounts.lst_registry.try_borrow_data()?,
@@ -89,7 +91,7 @@ pub fn handler(ctx: Context<UpdateLstPrices>) -> Result<UpdateLstPricesEvent> {
         lst_registry::save_header(header_info, &header)?;
     }
 
-    ctx.accounts.hylo.total_sol_cache.set(total_sol, epoch)?;
+    hylo.total_sol_cache.set(total_sol, epoch)?;
 
     let event = UpdateLstPricesEvent {
         updated_mints,

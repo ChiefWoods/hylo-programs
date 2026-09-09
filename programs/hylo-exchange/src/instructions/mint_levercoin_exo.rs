@@ -22,29 +22,29 @@ pub struct MintLevercoinExo<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(seeds = [HYLO], bump)]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, levercoin_mint.key().as_ref()],
-        bump = exo_pair.levercoin_auth_bump,
+        bump = exo_pair.load()?.levercoin_auth_bump,
     )]
     pub levercoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [EXO_VAULT_AUTH, collateral_mint.key().as_ref()],
-        bump = exo_pair.vault_auth_bump,
+        bump = exo_pair.load()?.vault_auth_bump,
     )]
     pub vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [FEE_AUTH, collateral_mint.key().as_ref()],
-        bump = exo_pair.fee_auth_bump,
+        bump = exo_pair.load()?.fee_auth_bump,
     )]
     pub fee_auth: UncheckedAccount<'info>,
     #[account(
@@ -79,7 +79,7 @@ pub struct MintLevercoinExo<'info> {
     #[account(
         mut,
         seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()],
-        bump = exo_pair.levercoin_mint_bump,
+        bump = exo_pair.load()?.levercoin_mint_bump,
     )]
     pub levercoin_mint: Account<'info, Mint>,
     /// CHECK: IDL metadata: no additional constraints.
@@ -92,14 +92,16 @@ pub fn handler(
     amount: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<MintLevercoinExoEvent> {
+    let hylo = ctx.accounts.hylo.load()?;
+    let exo_pair = ctx.accounts.exo_pair.load()?;
+
     require!(amount > 0, CoreError::ZeroAmount);
     let clock = Clock::get()?;
-    exo_user_gates(&ctx.accounts.hylo, &ctx.accounts.exo_pair, clock.epoch)?;
-    let price_update =
-        load_exo_price_update(&ctx.accounts.collateral_usd_pyth_feed, &ctx.accounts.exo_pair)?;
+    exo_user_gates(&hylo, &exo_pair, clock.epoch)?;
+    let price_update = load_exo_price_update(&ctx.accounts.collateral_usd_pyth_feed, &exo_pair)?;
     let exchange = load_exo_exchange(
         clock,
-        &ctx.accounts.exo_pair,
+        &exo_pair,
         &ctx.accounts.collateral_mint,
         &ctx.accounts.collateral_vault,
         &price_update,
@@ -153,7 +155,7 @@ pub fn handler(
         ctx.accounts.user_levercoin_ta.to_account_info(),
         ctx.accounts.levercoin_auth.to_account_info(),
         ctx.accounts.levercoin_mint.key(),
-        ctx.accounts.exo_pair.levercoin_auth_bump,
+        exo_pair.levercoin_auth_bump,
         minted.bits,
     )?;
 
@@ -161,7 +163,7 @@ pub fn handler(
         collateral_mint: ctx.accounts.collateral_mint.key(),
         minted: minted.into(),
         nav: nav.into(),
-        oracle: ctx.accounts.exo_pair.oracle,
+        oracle: exo_pair.oracle,
         collateral_usd_price: oracle_event(exchange.collateral_oracle_price()),
         collateral_deposited: net_n9.into(),
         fees_deposited: fees_extracted.into(),

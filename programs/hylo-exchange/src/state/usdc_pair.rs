@@ -6,8 +6,8 @@ use hylo_core::{
 
 use super::*;
 
-#[account]
-#[derive(InitSpace)]
+#[account(zero_copy(unsafe))]
+#[repr(C)]
 pub struct UsdcPair {
     pub vault_auth_bump: u8,
     pub fee_auth_bump: u8,

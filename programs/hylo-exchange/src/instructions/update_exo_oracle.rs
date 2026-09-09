@@ -16,14 +16,14 @@ pub struct UpdateExoOracle<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     pub collateral_mint: Account<'info, Mint>,
 }
 
@@ -31,9 +31,10 @@ pub fn handler(
     ctx: Context<UpdateExoOracle>,
     new_oracle: Pubkey,
 ) -> Result<UpdateOracleAddressEvent> {
-    let expected = PythFeed::new(ctx.accounts.exo_pair.oracle_feed_id);
+    let pair = &mut ctx.accounts.exo_pair.load_mut()?;
+
+    let expected = PythFeed::new(pair.oracle_feed_id);
     require_keys_eq!(new_oracle, expected.address, ErrorCode::ExoOracleInvalid);
-    let pair = &mut ctx.accounts.exo_pair;
     let old_oracle = pair.oracle;
     pair.update_oracle(new_oracle)?;
     let event = UpdateOracleAddressEvent {

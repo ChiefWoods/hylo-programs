@@ -14,19 +14,21 @@ pub struct PauseExoPair<'info> {
         bump,
         has_one = pause_authority,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     pub collateral_mint: Account<'info, Mint>,
 }
 
 pub fn handler(ctx: Context<PauseExoPair>) -> Result<PauseEvent> {
-    ctx.accounts.exo_pair.pause()?;
+    let mut exo_pair = ctx.accounts.exo_pair.load_mut()?;
+
+    exo_pair.pause()?;
     let event = PauseEvent {};
     emit_cpi!(event.clone());
     Ok(event)

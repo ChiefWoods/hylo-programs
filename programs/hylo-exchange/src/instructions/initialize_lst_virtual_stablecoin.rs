@@ -21,23 +21,25 @@ pub struct InitializeLstVirtualStablecoin<'info> {
         has_one = admin,
         has_one = stablecoin_mint,
     )]
-    pub hylo: Account<'info, Hylo>,
-    #[account(seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
+    pub hylo: AccountLoader<'info, Hylo>,
+    #[account(seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
 }
 
 pub fn handler(
     ctx: Context<InitializeLstVirtualStablecoin>,
 ) -> Result<InitializeLstVirtualStablecoinEvent> {
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
     require!(
-        ctx.accounts.hylo.virtual_stablecoin.supply()? == UFix64::zero(),
+        hylo.virtual_stablecoin.supply()? == UFix64::zero(),
         ErrorCode::LstVirtualStablecoinAlreadyInitialized
     );
 
     let supply = UFix64::<N6>::new(ctx.accounts.stablecoin_mint.supply);
     require!(supply >= SUPPLY_FLOOR, ErrorCode::TokenAmountPrecisionError);
 
-    ctx.accounts.hylo.virtual_stablecoin.mint(supply)?;
+    hylo.virtual_stablecoin.mint(supply)?;
 
     let event = InitializeLstVirtualStablecoinEvent {
         stablecoin_amount: supply.into(),

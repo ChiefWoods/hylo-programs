@@ -21,11 +21,11 @@ pub struct DeprecateLevercoinPool<'info> {
         seeds::program = crate::hylo_exchange::ID,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(seeds = [POOL_CONFIG], bump)]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [POOL_AUTH], bump = pool_config.pool_auth_bump)]
+    #[account(seeds = [POOL_AUTH], bump = pool_config.load()?.pool_auth_bump)]
     pub pool_auth: UncheckedAccount<'info>,
     #[account(
         mut,
@@ -43,7 +43,7 @@ pub struct DeprecateLevercoinPool<'info> {
     pub admin_levercoin_ta: Account<'info, TokenAccount>,
     #[account(
         seeds = [&XSOL],
-        bump = hylo.levercoin_mint_bump,
+        bump = hylo.load()?.levercoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub levercoin_mint: Account<'info, Mint>,
@@ -51,8 +51,10 @@ pub struct DeprecateLevercoinPool<'info> {
 }
 
 pub fn handler(ctx: Context<DeprecateLevercoinPool>) -> Result<()> {
+    let pool_config = ctx.accounts.pool_config.load()?;
+
     let amount = ctx.accounts.levercoin_pool.amount;
-    let pool_auth_bump = [ctx.accounts.pool_config.pool_auth_bump];
+    let pool_auth_bump = [pool_config.pool_auth_bump];
     let pool_auth_seeds: &[&[u8]] = &[POOL_AUTH, &pool_auth_bump];
     token_ops::transfer_pda(
         ctx.accounts.token_program.to_account_info(),

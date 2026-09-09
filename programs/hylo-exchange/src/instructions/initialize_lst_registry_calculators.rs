@@ -17,9 +17,9 @@ pub struct InitializeLstRegistryCalculators<'info> {
         has_one = lst_registry,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [LST_REGISTRY_AUTH], bump = hylo.registry_auth_bump)]
+    #[account(seeds = [LST_REGISTRY_AUTH], bump = hylo.load()?.registry_auth_bump)]
     pub lst_registry_auth: UncheckedAccount<'info>,
     /// CHECK: Validated owner.
     #[account(
@@ -34,6 +34,8 @@ pub struct InitializeLstRegistryCalculators<'info> {
 }
 
 pub fn handler(ctx: Context<InitializeLstRegistryCalculators>) -> Result<()> {
+    let hylo = ctx.accounts.hylo.load()?;
+
     let registry_data = ctx.accounts.lst_registry.try_borrow_data()?;
     let table = lst_registry::load_table(&registry_data)?;
     let authority = table
@@ -58,7 +60,7 @@ pub fn handler(ctx: Context<InitializeLstRegistryCalculators>) -> Result<()> {
         ctx.accounts.lst_registry_auth.to_account_info(),
         ctx.accounts.admin.to_account_info(),
         ctx.accounts.system_program.to_account_info(),
-        ctx.accounts.hylo.registry_auth_bump,
+        hylo.registry_auth_bump,
         &preamble,
     )?;
     Ok(())

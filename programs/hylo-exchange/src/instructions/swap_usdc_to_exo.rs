@@ -17,44 +17,44 @@ use crate::{events::*, state::*};
 pub struct SwapUsdcToExo<'info> {
     pub user: Signer<'info>,
     #[account(seeds = [HYLO], bump)]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         seeds = [&POOL_CONFIG],
         bump,
         seeds::program = HYLO_EARN_POOL
     )]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_mint_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [EXO_VAULT_AUTH, collateral_mint.key().as_ref()],
-        bump = exo_pair.vault_auth_bump,
+        bump = exo_pair.load()?.vault_auth_bump,
     )]
     pub vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [USDC_VAULT_AUTH, usdc_mint.key().as_ref()],
-        bump = usdc_pair.vault_auth_bump,
+        bump = usdc_pair.load()?.vault_auth_bump,
     )]
     pub usdc_vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [POOL_AUTH],
-        bump = pool_config.pool_auth_bump,
+        bump = pool_config.load()?.pool_auth_bump,
         seeds::program = HYLO_EARN_POOL
     )]
     pub pool_auth: UncheckedAccount<'info>,
@@ -67,42 +67,42 @@ pub struct SwapUsdcToExo<'info> {
         associated_token::authority = vault_auth,
         associated_token::token_program = token_program,
     )]
-    pub collateral_vault: Account<'info, TokenAccount>,
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = usdc_mint,
         associated_token::authority = usdc_vault_auth,
         associated_token::token_program = token_program,
     )]
-    pub usdc_collateral_vault: Account<'info, TokenAccount>,
+    pub usdc_collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = stablecoin_mint,
         associated_token::authority = pool_auth,
         associated_token::token_program = token_program,
     )]
-    pub stablecoin_pool: Account<'info, TokenAccount>,
+    pub stablecoin_pool: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = collateral_mint,
         token::authority = user,
         token::token_program = token_program,
     )]
-    pub user_collateral_ta: Account<'info, TokenAccount>,
+    pub user_collateral_ta: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = usdc_mint,
         token::authority = user,
         token::token_program = token_program,
     )]
-    pub user_usdc_ta: Account<'info, TokenAccount>,
-    pub collateral_mint: Account<'info, Mint>,
+    pub user_usdc_ta: Box<Account<'info, TokenAccount>>,
+    pub collateral_mint: Box<Account<'info, Mint>>,
     #[account(address = anchor_spl::mint::USDC)]
-    pub usdc_mint: Account<'info, Mint>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
-    pub stablecoin_mint: Account<'info, Mint>,
-    #[account(seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()], bump = exo_pair.levercoin_mint_bump)]
-    pub levercoin_mint: Account<'info, Mint>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
+    pub stablecoin_mint: Box<Account<'info, Mint>>,
+    #[account(seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()], bump = exo_pair.load()?.levercoin_mint_bump)]
+    pub levercoin_mint: Box<Account<'info, Mint>>,
     /// CHECK: IDL metadata: no additional constraints.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,
     /// CHECK: Address is validated against USDC_USD.address in the handler.
@@ -113,7 +113,7 @@ pub struct SwapUsdcToExo<'info> {
     pub earn_pool: UncheckedAccount<'info>,
 }
 
-    pub fn handler(
+pub fn handler(
     mut ctx: Context<SwapUsdcToExo>,
     amount: u64,
     slippage_config: Option<SlippageConfig>,
@@ -129,8 +129,8 @@ pub struct SwapUsdcToExo<'info> {
                 user: &a.user,
                 hylo: &a.hylo,
                 pool_config: &a.pool_config,
-                exo_pair: &mut a.exo_pair,
-                usdc_pair: &mut a.usdc_pair,
+                exo_pair: &a.exo_pair,
+                usdc_pair: &a.usdc_pair,
                 stablecoin_mint_auth: &a.stablecoin_mint_auth,
                 vault_auth: &a.vault_auth,
                 usdc_vault_auth: &a.usdc_vault_auth,

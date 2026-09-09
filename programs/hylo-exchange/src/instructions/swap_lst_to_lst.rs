@@ -17,7 +17,7 @@ use crate::{events::*, state::*};
 pub struct SwapLstToLst<'info> {
     pub user: Signer<'info>,
     #[account(mut, seeds = [HYLO], bump)]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     pub lst_a_mint: Account<'info, Mint>,
     #[account(
         mut,
@@ -43,7 +43,7 @@ pub struct SwapLstToLst<'info> {
         seeds = [LST_HEADER, lst_a_mint.key().as_ref()],
         bump,
     )]
-    pub lst_a_header: Account<'info, LstHeader>,
+    pub lst_a_header: AccountLoader<'info, LstHeader>,
     pub lst_b_mint: Account<'info, Mint>,
     #[account(
         mut,
@@ -69,7 +69,7 @@ pub struct SwapLstToLst<'info> {
         seeds = [LST_HEADER, lst_b_mint.key().as_ref()],
         bump,
     )]
-    pub lst_b_header: Account<'info, LstHeader>,
+    pub lst_b_header: AccountLoader<'info, LstHeader>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [FEE_AUTH, lst_a_mint.key().as_ref()],
@@ -91,6 +91,10 @@ pub fn handler(
     amount_lst_a: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<SwapLstToLstEvent> {
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+    let lst_a_header = ctx.accounts.lst_a_header.load()?;
+    let lst_b_header = ctx.accounts.lst_b_header.load()?;
+
     require!(amount_lst_a > 0, CoreError::ZeroAmount);
     require_keys_neq!(
         ctx.accounts.lst_a_mint.key(),
@@ -99,10 +103,9 @@ pub fn handler(
     );
     let clock = Clock::get()?;
     let epoch = clock.epoch;
-    lst_user_gates(&ctx.accounts.hylo, epoch)?;
+    lst_user_gates(&hylo, epoch)?;
     require!(
-        ctx.accounts.lst_a_header.price_sol.epoch == epoch
-            && ctx.accounts.lst_b_header.price_sol.epoch == epoch,
+        lst_a_header.price_sol.epoch == epoch && lst_b_header.price_sol.epoch == epoch,
         ErrorCode::LstPriceOutdated
     );
 
@@ -110,12 +113,12 @@ pub fn handler(
     let FeeExtract {
         fees_extracted,
         amount_remaining,
-    } = AssetSwapConfig::new(ctx.accounts.hylo.lst_swap_fee)?.apply_fee(lst_a_in)?;
+    } = AssetSwapConfig::new(hylo.lst_swap_fee)?.apply_fee(lst_a_in)?;
     require!(amount_remaining > UFix64::zero(), CoreError::ZeroAmount);
-    let lst_b_out = ctx.accounts.lst_a_header.price_sol.convert_lst_amount(
+    let lst_b_out = lst_a_header.price_sol.convert_lst_amount(
         epoch,
         amount_remaining,
-        &ctx.accounts.lst_b_header.price_sol,
+        &lst_b_header.price_sol,
     )?;
     require!(lst_b_out > UFix64::zero(), CoreError::ZeroAmount);
     require!(
@@ -161,8 +164,8 @@ pub fn handler(
     )?;
 
     let a_before = UFix64::<N9>::new(ctx.accounts.lst_a_vault.amount);
-    ctx.accounts.hylo.refresh_lst_vault(
-        &ctx.accounts.lst_a_header.price_sol,
+    hylo.refresh_lst_vault(
+        &lst_a_header.price_sol,
         a_before,
         a_before
             .checked_add(&amount_remaining)
@@ -170,8 +173,8 @@ pub fn handler(
         epoch,
     )?;
     let b_before = UFix64::<N9>::new(ctx.accounts.lst_b_vault.amount);
-    ctx.accounts.hylo.refresh_lst_vault(
-        &ctx.accounts.lst_b_header.price_sol,
+    hylo.refresh_lst_vault(
+        &lst_b_header.price_sol,
         b_before,
         b_before
             .checked_sub(&lst_b_out)

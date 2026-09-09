@@ -14,14 +14,14 @@ pub struct UpdateOracleInterval<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(
     ctx: Context<UpdateOracleInterval>,
     new_oracle_interval_secs: u64,
 ) -> Result<UpdateOracleIntervalEvent> {
-    let hylo = &mut ctx.accounts.hylo;
+    let hylo = &mut ctx.accounts.hylo.load_mut()?;
     let old_oracle_interval_secs = hylo.oracle_interval_secs;
     hylo.update_oracle_interval(new_oracle_interval_secs)?;
     let event = UpdateOracleIntervalEvent {

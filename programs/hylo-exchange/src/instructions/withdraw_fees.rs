@@ -19,7 +19,7 @@ pub struct WithdrawFees<'info> {
         bump,
         has_one = treasury,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [FEE_AUTH, fee_token_mint.key().as_ref()],

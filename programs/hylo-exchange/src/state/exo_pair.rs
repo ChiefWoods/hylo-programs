@@ -9,8 +9,8 @@ use hylo_core::{
 
 use super::*;
 
-#[account]
-#[derive(InitSpace)]
+#[account(zero_copy(unsafe))]
+#[repr(C)]
 pub struct ExoPair {
     pub collateral_mint: Pubkey,
     pub levercoin_mint_bump: u8,

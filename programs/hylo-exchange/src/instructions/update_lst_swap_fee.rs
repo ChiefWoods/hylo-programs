@@ -14,14 +14,14 @@ pub struct UpdateLstSwapFee<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(
     ctx: Context<UpdateLstSwapFee>,
     new_lst_swap_fee: UFixValue64,
 ) -> Result<UpdateFeeEvent> {
-    let hylo = &mut ctx.accounts.hylo;
+    let hylo = &mut ctx.accounts.hylo.load_mut()?;
     let old_fee = hylo.lst_swap_fee;
     hylo.update_lst_swap_fee(new_lst_swap_fee)?;
     let event = UpdateFeeEvent {

@@ -20,11 +20,11 @@ pub struct UpdateWithdrawalLimit<'info> {
         seeds::program = crate::hylo_exchange::ID,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [POOL_CONFIG], bump)]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [POOL_AUTH], bump = pool_config.pool_auth_bump)]
+    #[account(seeds = [POOL_AUTH], bump = pool_config.load()?.pool_auth_bump)]
     pub pool_auth: UncheckedAccount<'info>,
     #[account(
         associated_token::mint = stablecoin_mint,
@@ -34,7 +34,7 @@ pub struct UpdateWithdrawalLimit<'info> {
     pub stablecoin_pool: Account<'info, TokenAccount>,
     #[account(
         seeds = [&HYUSD],
-        bump = hylo.stablecoin_mint_bump,
+        bump = hylo.load()?.stablecoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
@@ -45,7 +45,7 @@ pub fn handler(
     ctx: Context<UpdateWithdrawalLimit>,
     new_withdrawal_limit: UFixValue64,
 ) -> Result<UpdateWithdrawalLimitEvent> {
-    let config = &mut ctx.accounts.pool_config;
+    let config = &mut ctx.accounts.pool_config.load_mut()?;
     let old_withdrawal_limit = config.withdrawal_limiter.limit;
     config.update_withdrawal_limit(new_withdrawal_limit, Clock::get()?.epoch)?;
     let event = UpdateWithdrawalLimitEvent {

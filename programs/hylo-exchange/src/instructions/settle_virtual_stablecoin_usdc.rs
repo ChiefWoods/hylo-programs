@@ -18,32 +18,32 @@ use crate::{events::*, state::*};
 #[derive(Accounts)]
 pub struct SettleVirtualStablecoinUsdc<'info> {
     #[account(seeds = [HYLO], bump)]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
     #[account(
         seeds = [&POOL_CONFIG],
         bump,
         seeds::program = HYLO_EARN_POOL,
     )]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_mint_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [POOL_AUTH],
-        bump = pool_config.pool_auth_bump,
+        bump = pool_config.load()?.pool_auth_bump,
         seeds::program = HYLO_EARN_POOL,
     )]
     pub pool_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [USDC_VAULT_AUTH, usdc_mint.key().as_ref()],
-        bump = usdc_pair.vault_auth_bump,
+        bump = usdc_pair.load()?.vault_auth_bump,
     )]
     pub usdc_vault_auth: UncheckedAccount<'info>,
     #[account(
@@ -61,7 +61,7 @@ pub struct SettleVirtualStablecoinUsdc<'info> {
     pub stablecoin_pool: Account<'info, TokenAccount>,
     #[account(address = anchor_spl::mint::USDC)]
     pub usdc_mint: Account<'info, Mint>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: Address is validated against USDC_USD.address in the handler.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
@@ -71,16 +71,15 @@ pub struct SettleVirtualStablecoinUsdc<'info> {
 pub fn handler(
     ctx: Context<SettleVirtualStablecoinUsdc>,
 ) -> Result<SettleVirtualStablecoinUsdcEvent> {
+    let hylo = ctx.accounts.hylo.load()?;
+    let mut usdc_pair = ctx.accounts.usdc_pair.load_mut()?;
+
     if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
 
     let clock = Clock::get()?;
-    let usdc_oracle = assert_usdc_par(
-        &clock,
-        &ctx.accounts.usdc_pair,
-        &ctx.accounts.usdc_usd_pyth_feed,
-    )?;
+    let usdc_oracle = assert_usdc_par(&clock, &usdc_pair, &ctx.accounts.usdc_usd_pyth_feed)?;
 
     let vault = UFix64::<N6>::new(ctx.accounts.usdc_collateral_vault.amount);
     let vault_n9 = vault
@@ -89,13 +88,16 @@ pub fn handler(
     let tvl = total_value_locked(vault_n9, usdc_oracle.price_range()?.lower)?
         .checked_convert::<N6>()
         .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinConversion))?;
-    let virtual_supply = ctx.accounts.usdc_pair.virtual_stablecoin.supply()?;
+    let virtual_supply = usdc_pair.virtual_stablecoin.supply()?;
     require!(tvl > virtual_supply, ErrorCode::SettleVirtualStablecoinNoop);
 
     let surplus = tvl
         .checked_sub(&virtual_supply)
         .ok_or_else(|| error!(ErrorCode::SettleVirtualStablecoinUnderflow))?;
-    require!(surplus > UFix64::zero(), ErrorCode::SettleVirtualStablecoinNoop);
+    require!(
+        surplus > UFix64::zero(),
+        ErrorCode::SettleVirtualStablecoinNoop
+    );
 
     mint_stablecoin(
         ctx.accounts.token_program.to_account_info(),
@@ -103,14 +105,14 @@ pub fn handler(
         ctx.accounts.stablecoin_pool.to_account_info(),
         ctx.accounts.stablecoin_mint_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         surplus.bits,
     )?;
-    ctx.accounts.usdc_pair.virtual_stablecoin.mint(surplus)?;
+    usdc_pair.virtual_stablecoin.mint(surplus)?;
 
     let event = SettleVirtualStablecoinUsdcEvent {
         stablecoin_minted: surplus.into(),
-        virtual_stablecoin_supply: ctx.accounts.usdc_pair.virtual_stablecoin.supply()?.into(),
+        virtual_stablecoin_supply: usdc_pair.virtual_stablecoin.supply()?.into(),
         pool_balance: UFix64::<N6>::new(
             ctx.accounts
                 .stablecoin_pool

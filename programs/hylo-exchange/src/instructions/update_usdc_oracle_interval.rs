@@ -13,16 +13,16 @@ pub struct UpdateUsdcOracleInterval<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
 }
 
 pub fn handler(
     ctx: Context<UpdateUsdcOracleInterval>,
     new_oracle_interval_secs: u64,
 ) -> Result<UpdateOracleIntervalEvent> {
-    let pair = &mut ctx.accounts.usdc_pair;
+    let pair = &mut ctx.accounts.usdc_pair.load_mut()?;
     let old_oracle_interval_secs = pair.oracle_interval_secs;
     pair.update_oracle_interval(new_oracle_interval_secs)?;
     let event = UpdateOracleIntervalEvent {

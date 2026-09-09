@@ -13,16 +13,16 @@ pub struct UpdateUsdcRedeemFee<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
 }
 
 pub fn handler(
     ctx: Context<UpdateUsdcRedeemFee>,
     new_redeem_fee: UFixValue64,
 ) -> Result<UpdateFeeEvent> {
-    let pair = &mut ctx.accounts.usdc_pair;
+    let pair = &mut ctx.accounts.usdc_pair.load_mut()?;
     let old_fee = pair.redeem_fee;
     pair.update_redeem_fee(new_redeem_fee)?;
     let event = UpdateFeeEvent {

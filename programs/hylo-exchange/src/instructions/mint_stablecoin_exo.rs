@@ -28,30 +28,30 @@ pub struct MintStablecoinExo<'info> {
         bump,
         has_one = stablecoin_mint,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [EXO_VAULT_AUTH, collateral_mint.key().as_ref()],
-        bump = exo_pair.vault_auth_bump,
+        bump = exo_pair.load()?.vault_auth_bump,
     )]
     pub vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [FEE_AUTH, collateral_mint.key().as_ref()],
-        bump = exo_pair.fee_auth_bump,
+        bump = exo_pair.load()?.fee_auth_bump,
     )]
     pub fee_auth: UncheckedAccount<'info>,
     #[account(
@@ -83,7 +83,7 @@ pub struct MintStablecoinExo<'info> {
     )]
     pub user_stablecoin_ta: Account<'info, TokenAccount>,
     pub collateral_mint: Account<'info, Mint>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: IDL metadata: no additional constraints.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,
@@ -95,14 +95,16 @@ pub fn handler(
     amount: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<MintStablecoinExoEvent> {
+    let hylo = ctx.accounts.hylo.load()?;
+    let mut exo_pair = ctx.accounts.exo_pair.load_mut()?;
+
     require!(amount > 0, CoreError::ZeroAmount);
     let clock = Clock::get()?;
-    exo_user_gates(&ctx.accounts.hylo, &ctx.accounts.exo_pair, clock.epoch)?;
-    let price_update =
-        load_exo_price_update(&ctx.accounts.collateral_usd_pyth_feed, &ctx.accounts.exo_pair)?;
+    exo_user_gates(&hylo, &exo_pair, clock.epoch)?;
+    let price_update = load_exo_price_update(&ctx.accounts.collateral_usd_pyth_feed, &exo_pair)?;
     let exchange = load_exo_exchange(
         clock,
-        &ctx.accounts.exo_pair,
+        &exo_pair,
         &ctx.accounts.collateral_mint,
         &ctx.accounts.collateral_vault,
         &price_update,
@@ -154,11 +156,11 @@ pub fn handler(
         ctx.accounts.user_stablecoin_ta.to_account_info(),
         ctx.accounts.stablecoin_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         minted.bits,
     )?;
 
-    ctx.accounts.exo_pair.virtual_stablecoin.mint(minted)?;
+    exo_pair.virtual_stablecoin.mint(minted)?;
     let stablecoin_supply = UFix64::<N6>::new(
         ctx.accounts
             .stablecoin_mint
@@ -173,7 +175,7 @@ pub fn handler(
         collateral_usd_price: oracle_event(exchange.collateral_oracle_price()),
         collateral_deposited: net_n9.into(),
         fees_deposited: fees_extracted.into(),
-        virtual_stablecoin_supply: ctx.accounts.exo_pair.virtual_stablecoin.supply()?.into(),
+        virtual_stablecoin_supply: exo_pair.virtual_stablecoin.supply()?.into(),
         stablecoin_supply: stablecoin_supply.into(),
     };
     emit_cpi!(event.clone());

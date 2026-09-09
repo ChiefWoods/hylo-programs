@@ -27,7 +27,7 @@ pub struct RedeemLevercoinLst<'info> {
         bump,
         has_one = levercoin_mint,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [FEE_AUTH, lst_mint.key().as_ref()],
@@ -55,7 +55,7 @@ pub struct RedeemLevercoinLst<'info> {
     )]
     pub lst_vault: Account<'info, TokenAccount>,
     #[account(seeds = [LST_HEADER, lst_mint.key().as_ref()], bump)]
-    pub lst_header: Account<'info, LstHeader>,
+    pub lst_header: AccountLoader<'info, LstHeader>,
     #[account(
         mut,
         token::mint = levercoin_mint,
@@ -70,7 +70,7 @@ pub struct RedeemLevercoinLst<'info> {
         token::token_program = token_program,
     )]
     pub user_lst_ta: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [XSOL], bump = hylo.levercoin_mint_bump)]
+    #[account(mut, seeds = [XSOL], bump = hylo.load()?.levercoin_mint_bump)]
     pub levercoin_mint: Account<'info, Mint>,
     pub lst_mint: Account<'info, Mint>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.
@@ -83,26 +83,29 @@ pub fn handler(
     amount_to_redeem: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<RedeemLevercoinLstEvent> {
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+    let lst_header = ctx.accounts.lst_header.load()?;
+
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
     require!(amount_to_redeem > 0, CoreError::ZeroAmount);
     let clock = Clock::get()?;
     let epoch = clock.epoch;
-    lst_user_gates(&ctx.accounts.hylo, epoch)?;
+    lst_user_gates(&hylo, epoch)?;
 
     let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
     let exchange = LstExchangeContext::load(
         clock,
-        &ctx.accounts.hylo.total_sol_cache,
-        ctx.accounts.hylo.stablecoin_mint_threshold()?,
-        ctx.accounts.hylo.oracle_config()?,
-        ctx.accounts.hylo.levercoin_fees,
+        &hylo.total_sol_cache,
+        hylo.stablecoin_mint_threshold()?,
+        hylo.oracle_config()?,
+        hylo.levercoin_fees,
         &price_update,
-        ctx.accounts.hylo.virtual_stablecoin,
+        hylo.virtual_stablecoin,
         Some(&ctx.accounts.levercoin_mint),
-        ctx.accounts.hylo.lst_sell_curve_config,
-        ctx.accounts.hylo.lst_buy_curve_config,
+        hylo.lst_sell_curve_config,
+        hylo.lst_buy_curve_config,
     )?;
     require!(
         exchange.rebalance_mode() != hylo_core::rebalance::mode::RebalanceMode::Depeg,
@@ -110,10 +113,15 @@ pub fn handler(
     );
 
     let redeemed = UFix64::<N6>::new(amount_to_redeem);
-    require!(redeemed <= exchange.levercoin_supply()?, CoreError::ZeroAmount);
-    let price = &ctx.accounts.lst_header.price_sol;
+    require!(
+        redeemed <= exchange.levercoin_supply()?,
+        CoreError::ZeroAmount
+    );
+    let price = &lst_header.price_sol;
     let nav = exchange.levercoin_redeem_nav()?;
-    let gross_lst = exchange.token_conversion(price)?.token_to_lst(redeemed, nav)?;
+    let gross_lst = exchange
+        .token_conversion(price)?
+        .token_to_lst(redeemed, nav)?;
     require!(gross_lst > UFix64::zero(), CoreError::ZeroAmount);
     require!(
         gross_lst.bits <= ctx.accounts.lst_vault.amount,
@@ -161,7 +169,7 @@ pub fn handler(
     )?;
 
     let before = UFix64::<N9>::new(ctx.accounts.lst_vault.amount);
-    ctx.accounts.hylo.refresh_lst_vault(
+    hylo.refresh_lst_vault(
         price,
         before,
         before

@@ -23,15 +23,15 @@ pub struct RegisterLst<'info> {
         has_one = lst_registry,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         init,
         payer = admin,
-        space = LstHeader::DISCRIMINATOR.len() + LstHeader::INIT_SPACE,
+        space = LstHeader::DISCRIMINATOR.len() + core::mem::size_of::<LstHeader>(),
         seeds = [LST_HEADER, lst_mint.key().as_ref()],
         bump,
     )]
-    pub lst_header: Account<'info, LstHeader>,
+    pub lst_header: AccountLoader<'info, LstHeader>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [FEE_AUTH, lst_mint.key().as_ref()],
@@ -45,7 +45,7 @@ pub struct RegisterLst<'info> {
     )]
     pub vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [LST_REGISTRY_AUTH], bump = hylo.registry_auth_bump)]
+    #[account(seeds = [LST_REGISTRY_AUTH], bump = hylo.load()?.registry_auth_bump)]
     pub registry_auth: UncheckedAccount<'info>,
     #[account(
         mut,
@@ -93,6 +93,8 @@ pub struct RegisterLst<'info> {
 }
 
 pub fn handler(ctx: Context<RegisterLst>, rebalance_fee: UFixValue64) -> Result<RegisterLstEvent> {
+    let hylo = ctx.accounts.hylo.load()?;
+
     require!(
         ctx.accounts.lst_mint.decimals == LST_DECIMALS,
         ErrorCode::ExoAmountDecimals
@@ -176,7 +178,7 @@ pub fn handler(ctx: Context<RegisterLst>, rebalance_fee: UFixValue64) -> Result<
     let epoch = Clock::get()?.epoch;
     let price_sol = LstSolPrice::new(true_price.price, epoch);
 
-    ctx.accounts.lst_header.set_inner(LstHeader {
+    *ctx.accounts.lst_header.load_init()? = LstHeader {
         mint: ctx.accounts.lst_mint.key(),
         vault: ctx.accounts.lst_vault.key(),
         pool_state: ctx.accounts.lst_stake_pool_state.key(),
@@ -186,7 +188,7 @@ pub fn handler(ctx: Context<RegisterLst>, rebalance_fee: UFixValue64) -> Result<
         last_yield_harvest_epoch: 0,
         rebalance_fee,
         _reserved: [0; 55],
-    });
+    };
 
     let block = [
         ctx.accounts.lst_header.key(),
@@ -200,7 +202,7 @@ pub fn handler(ctx: Context<RegisterLst>, rebalance_fee: UFixValue64) -> Result<
         ctx.accounts.registry_auth.to_account_info(),
         ctx.accounts.admin.to_account_info(),
         ctx.accounts.system_program.to_account_info(),
-        ctx.accounts.hylo.registry_auth_bump,
+        hylo.registry_auth_bump,
         &block,
     )?;
 

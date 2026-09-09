@@ -20479,6 +20479,10 @@
             "type": "bool"
           }
         ]
+      },
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
       }
     },
     {
@@ -20935,6 +20939,10 @@
             }
           }
         ]
+      },
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
       }
     },
     {
@@ -21355,6 +21363,10 @@
             }
           }
         ]
+      },
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
       }
     },
     {
@@ -21524,6 +21536,10 @@
             }
           }
         ]
+      },
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
       }
     },
     {
@@ -22728,7 +22744,7 @@
     {
       "name": "StablecoinFees",
       "docs": [
-        "**Deprecated** — retained only for `Hylo` account deserialization."
+        "**Deprecated** \u2014 retained only for `Hylo` account deserialization."
       ],
       "type": {
         "kind": "struct",
@@ -23370,6 +23386,10 @@
             }
           }
         ]
+      },
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
       }
     },
     {

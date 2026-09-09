@@ -22,18 +22,18 @@ pub struct InitializeEarnPool<'info> {
     #[account(
         init,
         payer = admin,
-        space = PoolConfig::DISCRIMINATOR.len() + PoolConfig::INIT_SPACE,
+        space = PoolConfig::DISCRIMINATOR.len() + core::mem::size_of::<PoolConfig>(),
         seeds = [POOL_CONFIG],
         bump,
     )]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     #[account(
         seeds = [&HYLO],
         bump,
         seeds::program = crate::hylo_exchange::ID,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: PDA is constrained by its fixed seed below.
     #[account(seeds = [POOL_AUTH], bump)]
     pub pool_auth: UncheckedAccount<'info>,
@@ -47,7 +47,7 @@ pub struct InitializeEarnPool<'info> {
     pub stablecoin_pool: Account<'info, TokenAccount>,
     #[account(
         seeds = [&HYUSD],
-        bump = hylo.stablecoin_mint_bump,
+        bump = hylo.load()?.stablecoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
@@ -65,7 +65,7 @@ pub struct InitializeEarnPool<'info> {
 }
 
 pub fn handler(ctx: Context<InitializeEarnPool>) -> Result<()> {
-    let pool_config = &mut ctx.accounts.pool_config;
+    let pool_config = &mut ctx.accounts.pool_config.load_init()?;
     pool_config._dead_admin = ctx.accounts.admin.key();
     pool_config.pool_auth_bump = ctx.bumps.pool_auth;
     pool_config.lp_token_auth_bump = 0;

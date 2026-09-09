@@ -15,7 +15,7 @@ pub struct UpdateSolUsdOracle<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(
@@ -23,7 +23,7 @@ pub fn handler(
     new_oracle: Pubkey,
 ) -> Result<UpdateOracleAddressEvent> {
     require_keys_eq!(new_oracle, SOL_USD.address);
-    let hylo = &mut ctx.accounts.hylo;
+    let hylo = &mut ctx.accounts.hylo.load_mut()?;
     let old_oracle = hylo.sol_usd_oracle;
     hylo.update_sol_usd_oracle(new_oracle)?;
     let event = UpdateOracleAddressEvent {

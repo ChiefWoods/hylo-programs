@@ -13,13 +13,15 @@ pub struct PauseUsdcPair<'info> {
         bump,
         has_one = pause_authority,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
 }
 
 pub fn handler(ctx: Context<PauseUsdcPair>) -> Result<PauseEvent> {
-    ctx.accounts.usdc_pair.pause()?;
+    let mut usdc_pair = ctx.accounts.usdc_pair.load_mut()?;
+
+    usdc_pair.pause()?;
     let event = PauseEvent {};
     emit_cpi!(event.clone());
     Ok(event)

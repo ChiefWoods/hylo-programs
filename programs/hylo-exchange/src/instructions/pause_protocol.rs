@@ -14,11 +14,13 @@ pub struct PauseProtocol<'info> {
         bump,
         has_one = pause_authority,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(ctx: Context<PauseProtocol>) -> Result<PauseEvent> {
-    ctx.accounts.hylo.pause_protocol()?;
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
+    hylo.pause_protocol()?;
     let event = PauseEvent {};
     emit_cpi!(event.clone());
     Ok(event)

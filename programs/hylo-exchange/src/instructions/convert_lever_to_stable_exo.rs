@@ -26,30 +26,30 @@ pub struct ConvertLeverToStableExo<'info> {
         bump,
         has_one = stablecoin_mint,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, levercoin_mint.key().as_ref()],
-        bump = exo_pair.levercoin_auth_bump,
+        bump = exo_pair.load()?.levercoin_auth_bump,
     )]
     pub levercoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [EXO_VAULT_AUTH, collateral_mint.key().as_ref()],
-        bump = exo_pair.vault_auth_bump,
+        bump = exo_pair.load()?.vault_auth_bump,
     )]
     pub vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
@@ -63,37 +63,37 @@ pub struct ConvertLeverToStableExo<'info> {
         associated_token::authority = vault_auth,
         associated_token::token_program = token_program,
     )]
-    pub collateral_vault: Account<'info, TokenAccount>,
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = stablecoin_mint,
         associated_token::authority = fee_auth,
         associated_token::token_program = token_program,
     )]
-    pub fee_vault: Account<'info, TokenAccount>,
+    pub fee_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = levercoin_mint,
         token::authority = user,
         token::token_program = token_program,
     )]
-    pub user_levercoin_ta: Account<'info, TokenAccount>,
+    pub user_levercoin_ta: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = stablecoin_mint,
         token::authority = user,
         token::token_program = token_program,
     )]
-    pub user_stablecoin_ta: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
-    pub stablecoin_mint: Account<'info, Mint>,
+    pub user_stablecoin_ta: Box<Account<'info, TokenAccount>>,
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
+    pub stablecoin_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
         seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()],
-        bump = exo_pair.levercoin_mint_bump,
+        bump = exo_pair.load()?.levercoin_mint_bump,
     )]
-    pub levercoin_mint: Account<'info, Mint>,
-    pub collateral_mint: Account<'info, Mint>,
+    pub levercoin_mint: Box<Account<'info, Mint>>,
+    pub collateral_mint: Box<Account<'info, Mint>>,
     /// CHECK: IDL metadata: no additional constraints.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
@@ -104,18 +104,20 @@ pub fn handler(
     amount: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<ConvertLeverToStableExoEvent> {
+    let hylo = ctx.accounts.hylo.load()?;
+    let mut exo_pair = ctx.accounts.exo_pair.load_mut()?;
+
     require!(amount > 0, CoreError::ZeroAmount);
     let clock = Clock::get()?;
-    exo_user_gates(&ctx.accounts.hylo, &ctx.accounts.exo_pair, clock.epoch)?;
-    let price_update =
-        load_exo_price_update(&ctx.accounts.collateral_usd_pyth_feed, &ctx.accounts.exo_pair)?;
+    exo_user_gates(&hylo, &exo_pair, clock.epoch)?;
+    let price_update = load_exo_price_update(&ctx.accounts.collateral_usd_pyth_feed, &exo_pair)?;
     let exchange = load_exo_exchange(
         clock,
-        &ctx.accounts.exo_pair,
+        &exo_pair,
         &ctx.accounts.collateral_mint,
         &ctx.accounts.collateral_vault,
         &price_update,
-        Some(&ctx.accounts.levercoin_mint),
+        Some(ctx.accounts.levercoin_mint.as_ref().as_ref()),
     )?;
     require!(
         exchange.rebalance_mode() != RebalanceMode::Depeg,
@@ -123,7 +125,10 @@ pub fn handler(
     );
 
     let burned = UFix64::<N6>::new(amount);
-    require!(burned <= exchange.levercoin_supply()?, CoreError::ZeroAmount);
+    require!(
+        burned <= exchange.levercoin_supply()?,
+        CoreError::ZeroAmount
+    );
     let levercoin_nav = exchange.levercoin_redeem_nav()?;
     let stablecoin_nav = exchange.stablecoin_nav()?;
     let gross = exchange
@@ -153,7 +158,7 @@ pub fn handler(
         ctx.accounts.fee_vault.to_account_info(),
         ctx.accounts.stablecoin_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         fees_extracted.bits,
     )?;
     mint_stablecoin(
@@ -162,11 +167,11 @@ pub fn handler(
         ctx.accounts.user_stablecoin_ta.to_account_info(),
         ctx.accounts.stablecoin_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         amount_remaining.bits,
     )?;
 
-    ctx.accounts.exo_pair.virtual_stablecoin.mint(gross)?;
+    exo_pair.virtual_stablecoin.mint(gross)?;
 
     let event = ConvertLeverToStableExoEvent {
         collateral_mint: ctx.accounts.collateral_mint.key(),
@@ -176,7 +181,7 @@ pub fn handler(
         stablecoin_minted_fees: fees_extracted.into(),
         stablecoin_nav: stablecoin_nav.into(),
         collateral_usd_price: oracle_event(exchange.collateral_oracle_price()),
-        virtual_stablecoin_supply: ctx.accounts.exo_pair.virtual_stablecoin.supply()?.into(),
+        virtual_stablecoin_supply: exo_pair.virtual_stablecoin.supply()?.into(),
     };
     emit_cpi!(event.clone());
     Ok(event)

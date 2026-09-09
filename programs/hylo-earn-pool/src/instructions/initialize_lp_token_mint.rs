@@ -16,14 +16,14 @@ pub struct InitializeLpTokenMint<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     #[account(mut, seeds = [POOL_CONFIG], bump)]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     #[account(
         seeds = [&HYLO],
         bump,
         seeds::program = crate::hylo_exchange::ID,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [&MINT_AUTH, lp_token_mint.key().as_ref()],
@@ -54,8 +54,9 @@ pub fn handler(
     ctx: Context<InitializeLpTokenMint>,
     lp_token_metadata: TokenMetadata,
 ) -> Result<()> {
+    let pool_config = ctx.accounts.pool_config.load()?;
     require!(
-        ctx.accounts.pool_config.lp_token_mint_bump == 0,
+        pool_config.lp_token_mint_bump == 0,
         crate::error::ErrorCode::AdminNoop
     );
 
@@ -91,7 +92,8 @@ pub fn handler(
         None,
     )?;
 
-    let pool_config = &mut ctx.accounts.pool_config;
+    drop(pool_config);
+    let pool_config = &mut ctx.accounts.pool_config.load_mut()?;
     pool_config.lp_token_auth_bump = ctx.bumps.lp_token_auth;
     pool_config.lp_token_mint_bump = ctx.bumps.lp_token_mint;
     Ok(())

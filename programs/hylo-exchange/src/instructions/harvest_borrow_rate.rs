@@ -24,30 +24,30 @@ pub struct HarvestBorrowRate<'info> {
         bump,
         has_one = stablecoin_mint,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, levercoin_mint.key().as_ref()],
-        bump = exo_pair.levercoin_auth_bump,
+        bump = exo_pair.load()?.levercoin_auth_bump,
     )]
     pub levercoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [EXO_VAULT_AUTH, collateral_mint.key().as_ref()],
-        bump = exo_pair.vault_auth_bump,
+        bump = exo_pair.load()?.vault_auth_bump,
     )]
     pub vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
@@ -68,26 +68,26 @@ pub struct HarvestBorrowRate<'info> {
         associated_token::authority = vault_auth,
         associated_token::token_program = token_program,
     )]
-    pub collateral_vault: Account<'info, TokenAccount>,
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = stablecoin_mint,
         associated_token::authority = pool_auth,
         associated_token::token_program = token_program,
     )]
-    pub stablecoin_pool: Account<'info, TokenAccount>,
+    pub stablecoin_pool: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = stablecoin_mint,
         associated_token::authority = stablecoin_fee_auth,
         associated_token::token_program = token_program,
     )]
-    pub stablecoin_fee_vault: Account<'info, TokenAccount>,
-    pub collateral_mint: Account<'info, Mint>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
-    pub stablecoin_mint: Account<'info, Mint>,
-    #[account(seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()], bump = exo_pair.levercoin_mint_bump)]
-    pub levercoin_mint: Account<'info, Mint>,
+    pub stablecoin_fee_vault: Box<Account<'info, TokenAccount>>,
+    pub collateral_mint: Box<Account<'info, Mint>>,
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
+    pub stablecoin_mint: Box<Account<'info, Mint>>,
+    #[account(seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()], bump = exo_pair.load()?.levercoin_mint_bump)]
+    pub levercoin_mint: Box<Account<'info, Mint>>,
     /// CHECK: IDL metadata: no additional constraints.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,
     /// CHECK: Hylo Earn Pool program address is constrained below.
@@ -97,51 +97,53 @@ pub struct HarvestBorrowRate<'info> {
 }
 
 pub fn handler(ctx: Context<HarvestBorrowRate>) -> Result<HarvestBorrowRateEvent> {
+    let hylo = ctx.accounts.hylo.load()?;
+    let mut exo_pair = ctx.accounts.exo_pair.load_mut()?;
+
     require_keys_eq!(
         ctx.accounts.collateral_usd_pyth_feed.key(),
-        ctx.accounts.exo_pair.oracle,
+        exo_pair.oracle,
         ErrorCode::ExoOracleInvalid
     );
 
     let clock = Clock::get()?;
     let epoch = clock.epoch;
     require!(
-        ctx.accounts
-            .exo_pair
-            .borrow_rate_harvest_cache
-            .is_stale(epoch),
+        exo_pair.borrow_rate_harvest_cache.is_stale(epoch),
         ErrorCode::BorrowRateHarvestAlreadyRun
     );
     let elapsed = epoch
-        .checked_sub(ctx.accounts.exo_pair.borrow_rate_harvest_cache.epoch)
+        .checked_sub(exo_pair.borrow_rate_harvest_cache.epoch)
         .ok_or_else(|| error!(ErrorCode::BorrowRateHarvestEpochUnderflow))?;
 
     let price_update = load_price_update(
         &ctx.accounts.collateral_usd_pyth_feed,
-        &ctx.accounts.exo_pair.oracle_feed_id,
+        &exo_pair.oracle_feed_id,
     )
     .map_err(|_| error!(ErrorCode::ExoOracleInvalid))?;
-    let total_collateral =
-        normalize_mint_exp(&ctx.accounts.collateral_mint, ctx.accounts.collateral_vault.amount)?;
+    let total_collateral = normalize_mint_exp(
+        &ctx.accounts.collateral_mint,
+        ctx.accounts.collateral_vault.amount,
+    )?;
     let exchange = ExoExchangeContext::load(
         clock,
         total_collateral,
-        ctx.accounts.exo_pair.stablecoin_mint_threshold()?,
-        ctx.accounts.exo_pair.oracle_config()?,
-        ctx.accounts.exo_pair.levercoin_fees,
+        exo_pair.stablecoin_mint_threshold()?,
+        exo_pair.oracle_config()?,
+        exo_pair.levercoin_fees,
         &price_update,
-        ctx.accounts.exo_pair.virtual_stablecoin,
-        Some(&ctx.accounts.levercoin_mint),
-        ctx.accounts.exo_pair.sell_curve_config,
-        ctx.accounts.exo_pair.buy_curve_config,
-        ctx.accounts.exo_pair.levercoin_market_cap_limit.try_into()?,
+        exo_pair.virtual_stablecoin,
+        Some(ctx.accounts.levercoin_mint.as_ref().as_ref()),
+        exo_pair.sell_curve_config,
+        exo_pair.buy_curve_config,
+        exo_pair.levercoin_market_cap_limit.try_into()?,
     )?;
 
     let levercoin_market_cap = exchange.levercoin_market_cap()?;
     let gross_n9 = if exchange.rebalance_mode() < RebalanceMode::Neutral {
         UFix64::zero()
     } else {
-        ctx.accounts.exo_pair.borrow_rate_curve_config.apply_borrow_rate(
+        exo_pair.borrow_rate_curve_config.apply_borrow_rate(
             levercoin_market_cap,
             exchange.collateral_ratio(),
             UFix64::<Z0>::new(elapsed),
@@ -150,7 +152,7 @@ pub fn handler(ctx: Context<HarvestBorrowRate>) -> Result<HarvestBorrowRateEvent
     let gross: UFix64<N6> = gross_n9
         .checked_convert()
         .ok_or_else(|| error!(ErrorCode::TokenAmountPrecisionError))?;
-    let fee: UFix64<N4> = ctx.accounts.exo_pair.borrow_rate_fee.try_into()?;
+    let fee: UFix64<N4> = exo_pair.borrow_rate_fee.try_into()?;
     let extract = FeeExtract::new(fee, gross)?;
 
     mint_stablecoin(
@@ -159,7 +161,7 @@ pub fn handler(ctx: Context<HarvestBorrowRate>) -> Result<HarvestBorrowRateEvent
         ctx.accounts.stablecoin_fee_vault.to_account_info(),
         ctx.accounts.stablecoin_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         extract.fees_extracted.bits,
     )?;
     mint_stablecoin(
@@ -168,7 +170,7 @@ pub fn handler(ctx: Context<HarvestBorrowRate>) -> Result<HarvestBorrowRateEvent
         ctx.accounts.stablecoin_pool.to_account_info(),
         ctx.accounts.stablecoin_auth.to_account_info(),
         ctx.accounts.stablecoin_mint.key(),
-        ctx.accounts.hylo.stablecoin_auth_bump,
+        hylo.stablecoin_auth_bump,
         extract.amount_remaining.bits,
     )?;
 
@@ -177,12 +179,10 @@ pub fn handler(ctx: Context<HarvestBorrowRate>) -> Result<HarvestBorrowRateEvent
         .checked_add(&extract.amount_remaining)
         .ok_or_else(|| error!(ErrorCode::LstAdditionOverflow))?;
     if minted > UFix64::zero() {
-        ctx.accounts.exo_pair.virtual_stablecoin.mint(minted)?;
+        exo_pair.virtual_stablecoin.mint(minted)?;
     }
-    let pool_drawdown_repaid = drawdown_repay(
-        &mut ctx.accounts.exo_pair.pool_drawdown,
-        extract.amount_remaining,
-    )?;
+    let pool_drawdown_repaid =
+        drawdown_repay(&mut exo_pair.pool_drawdown, extract.amount_remaining)?;
     let net_to_pool = extract
         .amount_remaining
         .checked_sub(&pool_drawdown_repaid)
@@ -194,11 +194,9 @@ pub fn handler(ctx: Context<HarvestBorrowRate>) -> Result<HarvestBorrowRateEvent
             .amount
             .saturating_add(extract.amount_remaining.bits),
     );
-    ctx.accounts.exo_pair.borrow_rate_harvest_cache.update(
-        pool_balance,
-        net_to_pool,
-        epoch,
-    )?;
+    exo_pair
+        .borrow_rate_harvest_cache
+        .update(pool_balance, net_to_pool, epoch)?;
 
     let event = HarvestBorrowRateEvent {
         collateral_mint: ctx.accounts.collateral_mint.key(),

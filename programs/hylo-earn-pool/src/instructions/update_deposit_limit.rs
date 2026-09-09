@@ -21,11 +21,11 @@ pub struct UpdateDepositLimit<'info> {
         seeds::program = crate::hylo_exchange::ID,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [POOL_CONFIG], bump)]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [POOL_AUTH], bump = pool_config.pool_auth_bump)]
+    #[account(seeds = [POOL_AUTH], bump = pool_config.load()?.pool_auth_bump)]
     pub pool_auth: UncheckedAccount<'info>,
     #[account(
         associated_token::mint = stablecoin_mint,
@@ -35,7 +35,7 @@ pub struct UpdateDepositLimit<'info> {
     pub stablecoin_pool: Account<'info, TokenAccount>,
     #[account(
         seeds = [&HYUSD],
-        bump = hylo.stablecoin_mint_bump,
+        bump = hylo.load()?.stablecoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
@@ -46,7 +46,7 @@ pub fn handler(
     ctx: Context<UpdateDepositLimit>,
     new_deposit_limit: UFixValue64,
 ) -> Result<UpdateDepositLimitEvent> {
-    let config = &mut ctx.accounts.pool_config;
+    let config = &mut ctx.accounts.pool_config.load_mut()?;
     let old_deposit_limit = config.deposit_limiter.limit;
     let pool_amount = UFix64::<N6>::new(ctx.accounts.stablecoin_pool.amount);
     config.update_deposit_limit(pool_amount, new_deposit_limit)?;

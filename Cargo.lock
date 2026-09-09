@@ -1435,6 +1435,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "bytemuck",
  "hylo-core",
  "hylo-fix",
 ]
@@ -1445,6 +1446,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "bytemuck",
  "hylo-core",
  "hylo-fix",
  "hylo-idl",

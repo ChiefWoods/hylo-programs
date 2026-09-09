@@ -14,14 +14,14 @@ pub struct UpdateExoLevercoinFees<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     pub collateral_mint: Account<'info, Mint>,
 }
 
@@ -29,7 +29,7 @@ pub fn handler(
     ctx: Context<UpdateExoLevercoinFees>,
     new_levercoin_fees: LevercoinFees,
 ) -> Result<UpdateLevercoinFeesEvent> {
-    let pair = &mut ctx.accounts.exo_pair;
+    let pair = &mut ctx.accounts.exo_pair.load_mut()?;
     let old_levercoin_fees = pair.levercoin_fees;
     pair.update_levercoin_fees(new_levercoin_fees)?;
     let event = UpdateLevercoinFeesEvent {

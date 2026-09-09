@@ -9,8 +9,8 @@ use hylo_core::lst::stake_pool::SplStakePool;
 use hylo_core::pyth::{query_pyth_oracle, OraclePrice, USDC_USD};
 use hylo_core::rebalance::mode::RebalanceMode;
 use hylo_core::rebalance::pnl::RebalancePnl;
-use hylo_core::rebalance::pricing::RebalancePriceController;
 use hylo_core::rebalance::pool_drawdown::PoolDrawdown;
+use hylo_core::rebalance::pricing::RebalancePriceController;
 use hylo_core::solana_clock::SolanaClock;
 use hylo_core::util::{denormalize_mint_exp, normalize_mint_exp};
 use hylo_core::virtual_stablecoin::{VirtualStablecoin, SUPPLY_FLOOR};
@@ -24,11 +24,11 @@ use crate::{events::*, state::*};
 
 pub struct LstUsdcAccounts<'a, 'info> {
     pub user: &'a Signer<'info>,
-    pub hylo: &'a mut Account<'info, Hylo>,
-    pub pool_config: &'a Account<'info, PoolConfig>,
-    pub lst_header: &'a Account<'info, LstHeader>,
+    pub hylo: &'a AccountLoader<'info, Hylo>,
+    pub pool_config: &'a AccountLoader<'info, PoolConfig>,
+    pub lst_header: &'a AccountLoader<'info, LstHeader>,
     pub pool_state: &'a UncheckedAccount<'info>,
-    pub usdc_pair: &'a mut Account<'info, UsdcPair>,
+    pub usdc_pair: &'a AccountLoader<'info, UsdcPair>,
     pub stablecoin_mint_auth: &'a UncheckedAccount<'info>,
     pub lst_vault_auth: &'a UncheckedAccount<'info>,
     pub usdc_vault_auth: &'a UncheckedAccount<'info>,
@@ -52,10 +52,10 @@ pub struct LstUsdcAccounts<'a, 'info> {
 
 pub struct ExoUsdcAccounts<'a, 'info> {
     pub user: &'a Signer<'info>,
-    pub hylo: &'a Account<'info, Hylo>,
-    pub pool_config: &'a Account<'info, PoolConfig>,
-    pub exo_pair: &'a mut Account<'info, ExoPair>,
-    pub usdc_pair: &'a mut Account<'info, UsdcPair>,
+    pub hylo: &'a AccountLoader<'info, Hylo>,
+    pub pool_config: &'a AccountLoader<'info, PoolConfig>,
+    pub exo_pair: &'a AccountLoader<'info, ExoPair>,
+    pub usdc_pair: &'a AccountLoader<'info, UsdcPair>,
     pub stablecoin_mint_auth: &'a UncheckedAccount<'info>,
     pub vault_auth: &'a UncheckedAccount<'info>,
     pub usdc_vault_auth: &'a UncheckedAccount<'info>,
@@ -115,7 +115,10 @@ fn exo_gates(hylo: &Hylo, exo_pair: &ExoPair, usdc_pair: &UsdcPair, epoch: u64) 
     Ok(())
 }
 
-fn adjusted_lst_price(header: &LstHeader, pool_state: &UncheckedAccount) -> Result<hylo_core::lst::sol_price::LstSolPrice> {
+fn adjusted_lst_price(
+    header: &LstHeader,
+    pool_state: &UncheckedAccount,
+) -> Result<hylo_core::lst::sol_price::LstSolPrice> {
     let true_price = SplStakePool::from_bytes(&pool_state.try_borrow_data()?)?.true_price()?;
     Ok(true_price.adjust_price(header.rebalance_fee()?)?)
 }
@@ -189,7 +192,7 @@ fn settle_pnl<'info>(
     pnl: RebalancePnl,
     virtual_stablecoin: &mut VirtualStablecoin,
     pool_drawdown: &mut PoolDrawdown,
-    floor: UFix64<N6>,
+    _floor: UFix64<N6>,
     mode: RebalanceMode,
     pool_balance: u64,
     cpi: PnlCpi<'info>,
@@ -248,15 +251,29 @@ fn settle_pnl<'info>(
                 ),
                 loss.bits,
             )?;
-            virtual_stablecoin.burn_limited(loss, floor)?;
-            pool_drawdown.drawdown(loss)?;
             Ok((loss, UFix64::zero()))
         }
     }
 }
 
-fn pnl_cpi_from_lst<'info>(a: &LstUsdcAccounts<'_, 'info>) -> PnlCpi<'info> {
-    PnlCpi {
+fn apply_rebalance_loss(
+    virtual_stablecoin: &mut VirtualStablecoin,
+    pool_drawdown: &mut PoolDrawdown,
+    loss: UFix64<N6>,
+    floor: UFix64<N6>,
+) -> Result<()> {
+    if loss > UFix64::zero() {
+        virtual_stablecoin.burn_limited(loss, floor)?;
+        pool_drawdown.drawdown(loss)?;
+    }
+    Ok(())
+}
+
+fn pnl_cpi_from_lst<'info>(
+    a: &LstUsdcAccounts<'_, 'info>,
+    stablecoin_auth_bump: u8,
+) -> Result<PnlCpi<'info>> {
+    Ok(PnlCpi {
         hylo: a.hylo.to_account_info(),
         pool_config: a.pool_config.to_account_info(),
         pool_auth: a.pool_auth.to_account_info(),
@@ -267,41 +284,46 @@ fn pnl_cpi_from_lst<'info>(a: &LstUsdcAccounts<'_, 'info>) -> PnlCpi<'info> {
         token_program: a.token_program.to_account_info(),
         earn_pool: a.earn_pool.to_account_info(),
         stablecoin_mint_key: a.stablecoin_mint.key(),
-        stablecoin_auth_bump: a.hylo.stablecoin_auth_bump,
+        stablecoin_auth_bump,
         settlement_auth_bump: a.settlement_auth_bump,
-    }
+    })
 }
 
 /// `amount == None` uses the user's full LST balance, capped by buy-side capacity.
+#[inline(never)]
 pub fn swap_lst_to_usdc(
     a: LstUsdcAccounts,
     amount: Option<u64>,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<(SwapLstToUsdcEvent, SettleRebalancePnlLstEvent)> {
+    let mut hylo = a.hylo.load_mut()?;
+    let mut usdc_pair = a.usdc_pair.load_mut()?;
+    let lst_header = a.lst_header.load()?;
     let clock = Clock::get()?;
-    lst_gates(a.hylo, a.usdc_pair, clock.epoch())?;
-    let usdc_oracle = assert_usdc_par(&clock, a.usdc_pair, a.usdc_usd_pyth_feed)?;
+    lst_gates(&hylo, &usdc_pair, clock.epoch())?;
+    let usdc_oracle = assert_usdc_par(&clock, &usdc_pair, a.usdc_usd_pyth_feed)?;
 
     let epoch = clock.epoch();
-    let sol_price_update = load_price_update(a.sol_usd_pyth_feed, &hylo_core::pyth::SOL_USD.feed_id)?;
+    let sol_price_update =
+        load_price_update(a.sol_usd_pyth_feed, &hylo_core::pyth::SOL_USD.feed_id)?;
     let exchange = LstExchangeContext::load(
         clock,
-        &a.hylo.total_sol_cache,
-        a.hylo.stablecoin_mint_threshold()?,
-        a.hylo.oracle_config()?,
-        a.hylo.levercoin_fees,
+        &hylo.total_sol_cache,
+        hylo.stablecoin_mint_threshold()?,
+        hylo.oracle_config()?,
+        hylo.levercoin_fees,
         &sol_price_update,
-        a.hylo.virtual_stablecoin,
+        hylo.virtual_stablecoin,
         None,
-        a.hylo.lst_sell_curve_config,
-        a.hylo.lst_buy_curve_config,
+        hylo.lst_sell_curve_config,
+        hylo.lst_buy_curve_config,
     )?;
     require!(
         exchange.rebalance_buy_active(),
         ErrorCode::RebalanceBuyInactive
     );
 
-    let adjusted = adjusted_lst_price(a.lst_header, a.pool_state)?;
+    let adjusted = adjusted_lst_price(&lst_header, a.pool_state)?;
     let buy_target_lst = adjusted.convert_sol_to_lst(exchange.rebalance_buy_target()?, epoch)?;
     let requested = match amount {
         Some(raw) => {
@@ -339,7 +361,7 @@ pub fn swap_lst_to_usdc(
         usdc_out.bits <= a.usdc_vault.amount,
         CoreError::InsufficientLiquidity
     );
-    a.usdc_pair
+    usdc_pair
         .virtual_stablecoin
         .supply()?
         .checked_sub(&usdc_out)
@@ -348,11 +370,11 @@ pub fn swap_lst_to_usdc(
         slippage_config.validate_token_out(usdc_out)?;
     }
 
-    let pnl = exchange.rebalance_pnl_buy_side(&a.lst_header.price_sol, requested, usdc_out)?;
+    let pnl = exchange.rebalance_pnl_buy_side(&lst_header.price_sol, requested, usdc_out)?;
     let lst_sol_price = conversion.lst_sol_price;
 
     let usdc_mint_key = a.usdc_mint.key();
-    let usdc_vault_bump = [a.usdc_pair.vault_auth_bump];
+    let usdc_vault_bump = [usdc_pair.vault_auth_bump];
     let usdc_vault_seeds: &[&[u8]] = &[USDC_VAULT_AUTH, usdc_mint_key.as_ref(), &usdc_vault_bump];
 
     let lst_before = UFix64::<N9>::new(a.lst_vault.amount);
@@ -379,22 +401,48 @@ pub fn swap_lst_to_usdc(
     let lst_after = lst_before
         .checked_add(&requested)
         .ok_or(CoreError::DestinationCollateral)?;
-    a.hylo
-        .refresh_lst_vault(&a.lst_header.price_sol, lst_before, lst_after, epoch)?;
-    a.usdc_pair.virtual_stablecoin.burn(usdc_out)?;
+    hylo.refresh_lst_vault(&lst_header.price_sol, lst_before, lst_after, epoch)?;
+    usdc_pair.virtual_stablecoin.burn(usdc_out)?;
 
     let pool_balance = a.stablecoin_pool.amount;
-    let cpi = pnl_cpi_from_lst(&a);
-    let hylo: &mut Hylo = a.hylo;
-    let (burned, minted) = settle_pnl(
-        pnl,
-        &mut hylo.virtual_stablecoin,
-        &mut hylo.pool_drawdown,
-        SUPPLY_FLOOR,
-        exchange.rebalance_mode(),
-        pool_balance,
-        cpi,
-    )?;
+    let mode = exchange.rebalance_mode();
+    let stablecoin_auth_bump = hylo.stablecoin_auth_bump;
+    let (burned, minted) = if matches!(pnl, RebalancePnl::Loss(_)) {
+        drop(hylo);
+        drop(usdc_pair);
+        drop(lst_header);
+        let cpi = pnl_cpi_from_lst(&a, stablecoin_auth_bump)?;
+        let out = settle_pnl(
+            pnl,
+            &mut VirtualStablecoin::new(),
+            &mut PoolDrawdown::default(),
+            SUPPLY_FLOOR,
+            mode,
+            pool_balance,
+            cpi,
+        )?;
+        let mut hylo = a.hylo.load_mut()?;
+        let hylo = &mut *hylo;
+        apply_rebalance_loss(
+            &mut hylo.virtual_stablecoin,
+            &mut hylo.pool_drawdown,
+            out.0,
+            SUPPLY_FLOOR,
+        )?;
+        out
+    } else {
+        let cpi = pnl_cpi_from_lst(&a, stablecoin_auth_bump)?;
+        let hylo = &mut *hylo;
+        settle_pnl(
+            pnl,
+            &mut hylo.virtual_stablecoin,
+            &mut hylo.pool_drawdown,
+            SUPPLY_FLOOR,
+            mode,
+            pool_balance,
+            cpi,
+        )?
+    };
 
     Ok((
         SwapLstToUsdcEvent {
@@ -412,29 +460,34 @@ pub fn swap_lst_to_usdc(
     ))
 }
 
+#[inline(never)]
 pub fn swap_usdc_to_lst(
     a: LstUsdcAccounts,
     amount: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<(SwapUsdcToLstEvent, SettleRebalancePnlLstEvent)> {
     require!(amount > 0, CoreError::ZeroAmount);
+    let mut hylo = a.hylo.load_mut()?;
+    let mut usdc_pair = a.usdc_pair.load_mut()?;
+    let lst_header = a.lst_header.load()?;
     let clock = Clock::get()?;
-    lst_gates(a.hylo, a.usdc_pair, clock.epoch())?;
-    let usdc_oracle = assert_usdc_par(&clock, a.usdc_pair, a.usdc_usd_pyth_feed)?;
+    lst_gates(&hylo, &usdc_pair, clock.epoch())?;
+    let usdc_oracle = assert_usdc_par(&clock, &usdc_pair, a.usdc_usd_pyth_feed)?;
 
     let epoch = clock.epoch();
-    let sol_price_update = load_price_update(a.sol_usd_pyth_feed, &hylo_core::pyth::SOL_USD.feed_id)?;
+    let sol_price_update =
+        load_price_update(a.sol_usd_pyth_feed, &hylo_core::pyth::SOL_USD.feed_id)?;
     let exchange = LstExchangeContext::load(
         clock,
-        &a.hylo.total_sol_cache,
-        a.hylo.stablecoin_mint_threshold()?,
-        a.hylo.oracle_config()?,
-        a.hylo.levercoin_fees,
+        &hylo.total_sol_cache,
+        hylo.stablecoin_mint_threshold()?,
+        hylo.oracle_config()?,
+        hylo.levercoin_fees,
         &sol_price_update,
-        a.hylo.virtual_stablecoin,
+        hylo.virtual_stablecoin,
         None,
-        a.hylo.lst_sell_curve_config,
-        a.hylo.lst_buy_curve_config,
+        hylo.lst_sell_curve_config,
+        hylo.lst_buy_curve_config,
     )?;
     require!(
         exchange.rebalance_sell_active(),
@@ -449,7 +502,7 @@ pub fn swap_usdc_to_lst(
     let stake_pool = SplStakePool::from_bytes(&a.pool_state.try_borrow_data()?)?;
     let max_usdc = exchange.max_rebalance_sell_usdc(
         stake_pool,
-        a.lst_header.rebalance_fee()?,
+        lst_header.rebalance_fee()?,
         UFix64::new(a.lst_vault.amount),
         SUPPLY_FLOOR,
     )?;
@@ -457,7 +510,7 @@ pub fn swap_usdc_to_lst(
 
     let adjusted = stake_pool
         .true_price()?
-        .adjust_price(a.lst_header.rebalance_fee()?)?;
+        .adjust_price(lst_header.rebalance_fee()?)?;
     let conversion = exchange.rebalance_sell_conversion(&adjusted, usdc_in)?;
     let lst_out = conversion.token_to_lst(usdc_in, UFix64::one())?;
     require!(lst_out > UFix64::zero(), CoreError::ZeroAmount);
@@ -469,7 +522,7 @@ pub fn swap_usdc_to_lst(
         slippage_config.validate_token_out(lst_out)?;
     }
 
-    let pnl = exchange.rebalance_pnl_sell_side(&a.lst_header.price_sol, lst_out, usdc_in)?;
+    let pnl = exchange.rebalance_pnl_sell_side(&lst_header.price_sol, lst_out, usdc_in)?;
     let lst_sol_price = conversion.lst_sol_price;
 
     let lst_mint_key = a.lst_mint.key();
@@ -500,22 +553,48 @@ pub fn swap_usdc_to_lst(
     let lst_after = lst_before
         .checked_sub(&lst_out)
         .ok_or(CoreError::DestinationCollateral)?;
-    a.hylo
-        .refresh_lst_vault(&a.lst_header.price_sol, lst_before, lst_after, epoch)?;
-    a.usdc_pair.virtual_stablecoin.mint(usdc_in)?;
+    hylo.refresh_lst_vault(&lst_header.price_sol, lst_before, lst_after, epoch)?;
+    usdc_pair.virtual_stablecoin.mint(usdc_in)?;
 
     let pool_balance = a.stablecoin_pool.amount;
-    let cpi = pnl_cpi_from_lst(&a);
-    let hylo: &mut Hylo = a.hylo;
-    let (burned, minted) = settle_pnl(
-        pnl,
-        &mut hylo.virtual_stablecoin,
-        &mut hylo.pool_drawdown,
-        SUPPLY_FLOOR,
-        exchange.rebalance_mode(),
-        pool_balance,
-        cpi,
-    )?;
+    let mode = exchange.rebalance_mode();
+    let stablecoin_auth_bump = hylo.stablecoin_auth_bump;
+    let (burned, minted) = if matches!(pnl, RebalancePnl::Loss(_)) {
+        drop(hylo);
+        drop(usdc_pair);
+        drop(lst_header);
+        let cpi = pnl_cpi_from_lst(&a, stablecoin_auth_bump)?;
+        let out = settle_pnl(
+            pnl,
+            &mut VirtualStablecoin::new(),
+            &mut PoolDrawdown::default(),
+            SUPPLY_FLOOR,
+            mode,
+            pool_balance,
+            cpi,
+        )?;
+        let mut hylo = a.hylo.load_mut()?;
+        let hylo = &mut *hylo;
+        apply_rebalance_loss(
+            &mut hylo.virtual_stablecoin,
+            &mut hylo.pool_drawdown,
+            out.0,
+            SUPPLY_FLOOR,
+        )?;
+        out
+    } else {
+        let cpi = pnl_cpi_from_lst(&a, stablecoin_auth_bump)?;
+        let hylo = &mut *hylo;
+        settle_pnl(
+            pnl,
+            &mut hylo.virtual_stablecoin,
+            &mut hylo.pool_drawdown,
+            SUPPLY_FLOOR,
+            mode,
+            pool_balance,
+            cpi,
+        )?
+    };
 
     Ok((
         SwapUsdcToLstEvent {
@@ -533,8 +612,11 @@ pub fn swap_usdc_to_lst(
     ))
 }
 
-fn pnl_cpi_from_exo<'info>(a: &ExoUsdcAccounts<'_, 'info>) -> PnlCpi<'info> {
-    PnlCpi {
+fn pnl_cpi_from_exo<'info>(
+    a: &ExoUsdcAccounts<'_, 'info>,
+    stablecoin_auth_bump: u8,
+) -> Result<PnlCpi<'info>> {
+    Ok(PnlCpi {
         hylo: a.hylo.to_account_info(),
         pool_config: a.pool_config.to_account_info(),
         pool_auth: a.pool_auth.to_account_info(),
@@ -545,59 +627,64 @@ fn pnl_cpi_from_exo<'info>(a: &ExoUsdcAccounts<'_, 'info>) -> PnlCpi<'info> {
         token_program: a.token_program.to_account_info(),
         earn_pool: a.earn_pool.to_account_info(),
         stablecoin_mint_key: a.stablecoin_mint.key(),
-        stablecoin_auth_bump: a.hylo.stablecoin_auth_bump,
+        stablecoin_auth_bump,
         settlement_auth_bump: a.settlement_auth_bump,
-    }
+    })
 }
 
 fn load_exo_context<'info>(
     clock: Clock,
     a: &ExoUsdcAccounts<'_, 'info>,
+    exo_pair: &ExoPair,
     price_update: &PriceUpdateV2,
 ) -> Result<ExoExchangeContext<Clock>> {
     let total_collateral = normalize_mint_exp(a.collateral_mint, a.collateral_vault.amount)?;
     Ok(ExoExchangeContext::load(
         clock,
         total_collateral,
-        a.exo_pair.stablecoin_mint_threshold()?,
-        a.exo_pair.oracle_config()?,
-        a.exo_pair.levercoin_fees,
+        exo_pair.stablecoin_mint_threshold()?,
+        exo_pair.oracle_config()?,
+        exo_pair.levercoin_fees,
         price_update,
-        a.exo_pair.virtual_stablecoin,
+        exo_pair.virtual_stablecoin,
         Some(a.levercoin_mint),
-        a.exo_pair.sell_curve_config,
-        a.exo_pair.buy_curve_config,
-        a.exo_pair.levercoin_market_cap_limit.try_into()?,
+        exo_pair.sell_curve_config,
+        exo_pair.buy_curve_config,
+        exo_pair.levercoin_market_cap_limit.try_into()?,
     )?)
 }
 
-fn assert_exo_oracle(a: &ExoUsdcAccounts) -> Result<PriceUpdateV2> {
+fn assert_exo_oracle(a: &ExoUsdcAccounts, exo_pair: &ExoPair) -> Result<PriceUpdateV2> {
     require_keys_eq!(
         a.collateral_usd_pyth_feed.key(),
-        a.exo_pair.oracle,
+        exo_pair.oracle,
         ErrorCode::ExoOracleInvalid
     );
     let mut oracle_data: &[u8] = &a.collateral_usd_pyth_feed.try_borrow_data()?;
     let price_update = PriceUpdateV2::try_deserialize(&mut oracle_data)
         .map_err(|_| error!(ErrorCode::ExoOracleInvalid))?;
     require!(
-        price_update.price_message.feed_id == a.exo_pair.oracle_feed_id,
+        price_update.price_message.feed_id == exo_pair.oracle_feed_id,
         ErrorCode::ExoOracleInvalid
     );
     Ok(price_update)
 }
 
 /// `amount == None` uses the user's full collateral balance, capped by buy-side capacity.
+#[inline(never)]
 pub fn swap_exo_to_usdc(
     a: ExoUsdcAccounts,
     amount: Option<u64>,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<(SwapExoToUsdcEvent, SettleRebalancePnlExoEvent)> {
+    let hylo = a.hylo.load()?;
+    let mut exo_pair = a.exo_pair.load_mut()?;
+    let mut usdc_pair = a.usdc_pair.load_mut()?;
     let clock = Clock::get()?;
-    exo_gates(a.hylo, a.exo_pair, a.usdc_pair, clock.epoch())?;
-    let usdc_oracle = assert_usdc_par(&clock, a.usdc_pair, a.usdc_usd_pyth_feed)?;
-    let collateral_price_update = assert_exo_oracle(&a)?;
-    let exchange = load_exo_context(clock, &a, &collateral_price_update)?;
+    exo_gates(&hylo, &exo_pair, &usdc_pair, clock.epoch())?;
+    let usdc_oracle = assert_usdc_par(&clock, &usdc_pair, a.usdc_usd_pyth_feed)?;
+    let collateral_price_update = assert_exo_oracle(&a, &exo_pair)?;
+    let exchange = load_exo_context(clock, &a, &exo_pair, &collateral_price_update)?;
     require!(
         exchange.rebalance_buy_active(),
         ErrorCode::RebalanceBuyInactive
@@ -633,7 +720,8 @@ pub fn swap_exo_to_usdc(
     let mut requested_native = requested_native;
     let mut usdc_out = conversion.exo_to_token(requested, UFix64::one())?;
     if amount.is_none() && usdc_out.bits > a.usdc_collateral_vault.amount {
-        requested = conversion.token_to_exo(UFix64::new(a.usdc_collateral_vault.amount), UFix64::one())?;
+        requested =
+            conversion.token_to_exo(UFix64::new(a.usdc_collateral_vault.amount), UFix64::one())?;
         require!(requested > UFix64::zero(), CoreError::ZeroAmount);
         requested_native = denormalize_mint_exp(a.collateral_mint, requested)?;
         require!(requested_native > 0, CoreError::ZeroAmount);
@@ -645,7 +733,7 @@ pub fn swap_exo_to_usdc(
         usdc_out.bits <= a.usdc_collateral_vault.amount,
         CoreError::InsufficientLiquidity
     );
-    a.usdc_pair
+    usdc_pair
         .virtual_stablecoin
         .supply()?
         .checked_sub(&usdc_out)
@@ -659,10 +747,10 @@ pub fn swap_exo_to_usdc(
     let curve_price = exchange
         .rebalance_buy_curve()?
         .price(projected.collateral_ratio)?;
-    let floor: UFix64<N6> = a.exo_pair.virtual_stablecoin_supply_floor.try_into()?;
+    let floor: UFix64<N6> = exo_pair.virtual_stablecoin_supply_floor.try_into()?;
 
     let usdc_mint_key = a.usdc_mint.key();
-    let usdc_vault_bump = [a.usdc_pair.vault_auth_bump];
+    let usdc_vault_bump = [usdc_pair.vault_auth_bump];
     let usdc_vault_seeds: &[&[u8]] = &[USDC_VAULT_AUTH, usdc_mint_key.as_ref(), &usdc_vault_bump];
 
     transfer_checked_user(
@@ -684,11 +772,13 @@ pub fn swap_exo_to_usdc(
         a.usdc_mint.decimals,
         usdc_vault_seeds,
     )?;
-    a.usdc_pair.virtual_stablecoin.burn(usdc_out)?;
+    usdc_pair.virtual_stablecoin.burn(usdc_out)?;
 
     let pool_balance = a.stablecoin_pool.amount;
-    let cpi = pnl_cpi_from_exo(&a);
-    let exo_pair: &mut ExoPair = a.exo_pair;
+    let stablecoin_auth_bump = hylo.stablecoin_auth_bump;
+    drop(hylo);
+    let cpi = pnl_cpi_from_exo(&a, stablecoin_auth_bump)?;
+    let exo_pair = &mut *exo_pair;
     let (burned, minted) = settle_pnl(
         pnl,
         &mut exo_pair.virtual_stablecoin,
@@ -697,6 +787,12 @@ pub fn swap_exo_to_usdc(
         exchange.rebalance_mode(),
         pool_balance,
         cpi,
+    )?;
+    apply_rebalance_loss(
+        &mut exo_pair.virtual_stablecoin,
+        &mut exo_pair.pool_drawdown,
+        burned,
+        floor,
     )?;
 
     Ok((
@@ -716,17 +812,21 @@ pub fn swap_exo_to_usdc(
     ))
 }
 
+#[inline(never)]
 pub fn swap_usdc_to_exo(
     a: ExoUsdcAccounts,
     amount: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<(SwapUsdcToExoEvent, SettleRebalancePnlExoEvent)> {
     require!(amount > 0, CoreError::ZeroAmount);
+    let hylo = a.hylo.load()?;
+    let mut exo_pair = a.exo_pair.load_mut()?;
+    let mut usdc_pair = a.usdc_pair.load_mut()?;
     let clock = Clock::get()?;
-    exo_gates(a.hylo, a.exo_pair, a.usdc_pair, clock.epoch())?;
-    let usdc_oracle = assert_usdc_par(&clock, a.usdc_pair, a.usdc_usd_pyth_feed)?;
-    let collateral_price_update = assert_exo_oracle(&a)?;
-    let exchange = load_exo_context(clock, &a, &collateral_price_update)?;
+    exo_gates(&hylo, &exo_pair, &usdc_pair, clock.epoch())?;
+    let usdc_oracle = assert_usdc_par(&clock, &usdc_pair, a.usdc_usd_pyth_feed)?;
+    let collateral_price_update = assert_exo_oracle(&a, &exo_pair)?;
+    let exchange = load_exo_context(clock, &a, &exo_pair, &collateral_price_update)?;
     require!(
         exchange.rebalance_sell_active(),
         ErrorCode::RebalanceSellInactive
@@ -737,7 +837,7 @@ pub fn swap_usdc_to_exo(
         a.user_usdc_ta.amount >= usdc_in.bits,
         CoreError::InsufficientLiquidity
     );
-    let floor: UFix64<N6> = a.exo_pair.virtual_stablecoin_supply_floor.try_into()?;
+    let floor: UFix64<N6> = exo_pair.virtual_stablecoin_supply_floor.try_into()?;
     let max_usdc = exchange.max_rebalance_sell_usdc(floor)?;
     require!(usdc_in <= max_usdc, CoreError::InsufficientLiquidity);
 
@@ -761,7 +861,7 @@ pub fn swap_usdc_to_exo(
         .price(projected.collateral_ratio)?;
 
     let collateral_mint_key = a.collateral_mint.key();
-    let vault_bump = [a.exo_pair.vault_auth_bump];
+    let vault_bump = [exo_pair.vault_auth_bump];
     let vault_seeds: &[&[u8]] = &[EXO_VAULT_AUTH, collateral_mint_key.as_ref(), &vault_bump];
 
     transfer_checked_user(
@@ -783,11 +883,13 @@ pub fn swap_usdc_to_exo(
         a.collateral_mint.decimals,
         vault_seeds,
     )?;
-    a.usdc_pair.virtual_stablecoin.mint(usdc_in)?;
+    usdc_pair.virtual_stablecoin.mint(usdc_in)?;
 
     let pool_balance = a.stablecoin_pool.amount;
-    let cpi = pnl_cpi_from_exo(&a);
-    let exo_pair: &mut ExoPair = a.exo_pair;
+    let stablecoin_auth_bump = hylo.stablecoin_auth_bump;
+    drop(hylo);
+    let cpi = pnl_cpi_from_exo(&a, stablecoin_auth_bump)?;
+    let exo_pair = &mut *exo_pair;
     let (burned, minted) = settle_pnl(
         pnl,
         &mut exo_pair.virtual_stablecoin,
@@ -796,6 +898,12 @@ pub fn swap_usdc_to_exo(
         exchange.rebalance_mode(),
         pool_balance,
         cpi,
+    )?;
+    apply_rebalance_loss(
+        &mut exo_pair.virtual_stablecoin,
+        &mut exo_pair.pool_drawdown,
+        burned,
+        floor,
     )?;
 
     Ok((

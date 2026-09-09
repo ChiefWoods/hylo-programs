@@ -17,27 +17,27 @@ use crate::{events::*, state::*};
 pub struct SwapLstToUsdcAll<'info> {
     pub user: Signer<'info>,
     #[account(mut, seeds = [HYLO], bump)]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         seeds = [&POOL_CONFIG],
         bump,
         seeds::program = HYLO_EARN_POOL
     )]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     #[account(
         has_one = pool_state,
         seeds = [LST_HEADER, lst_mint.key().as_ref()],
         bump,
     )]
-    pub lst_header: Account<'info, LstHeader>,
+    pub lst_header: AccountLoader<'info, LstHeader>,
     /// CHECK: IDL metadata: relations=lst_header.
     pub pool_state: UncheckedAccount<'info>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_mint_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
@@ -49,13 +49,13 @@ pub struct SwapLstToUsdcAll<'info> {
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [USDC_VAULT_AUTH, usdc_mint.key().as_ref()],
-        bump = usdc_pair.vault_auth_bump,
+        bump = usdc_pair.load()?.vault_auth_bump,
     )]
     pub usdc_vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [POOL_AUTH],
-        bump = pool_config.pool_auth_bump,
+        bump = pool_config.load()?.pool_auth_bump,
         seeds::program = HYLO_EARN_POOL
     )]
     pub pool_auth: UncheckedAccount<'info>,
@@ -68,40 +68,40 @@ pub struct SwapLstToUsdcAll<'info> {
         associated_token::authority = lst_vault_auth,
         associated_token::token_program = token_program,
     )]
-    pub lst_vault: Account<'info, TokenAccount>,
+    pub lst_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = usdc_mint,
         associated_token::authority = usdc_vault_auth,
         associated_token::token_program = token_program,
     )]
-    pub usdc_vault: Account<'info, TokenAccount>,
+    pub usdc_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = stablecoin_mint,
         associated_token::authority = pool_auth,
         associated_token::token_program = token_program,
     )]
-    pub stablecoin_pool: Account<'info, TokenAccount>,
+    pub stablecoin_pool: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = lst_mint,
         token::authority = user,
         token::token_program = token_program,
     )]
-    pub user_lst_ta: Account<'info, TokenAccount>,
+    pub user_lst_ta: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = usdc_mint,
         token::authority = user,
         token::token_program = token_program,
     )]
-    pub user_usdc_ta: Account<'info, TokenAccount>,
-    pub lst_mint: Account<'info, Mint>,
+    pub user_usdc_ta: Box<Account<'info, TokenAccount>>,
+    pub lst_mint: Box<Account<'info, Mint>>,
     #[account(address = anchor_spl::mint::USDC)]
-    pub usdc_mint: Account<'info, Mint>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
-    pub stablecoin_mint: Account<'info, Mint>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
+    pub stablecoin_mint: Box<Account<'info, Mint>>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,
     /// CHECK: Address is validated against USDC_USD.address in the handler.
@@ -112,7 +112,7 @@ pub struct SwapLstToUsdcAll<'info> {
     pub earn_pool: UncheckedAccount<'info>,
 }
 
-    pub fn handler(
+pub fn handler(
     mut ctx: Context<SwapLstToUsdcAll>,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<()> {
@@ -129,11 +129,11 @@ pub struct SwapLstToUsdcAll<'info> {
         rebalance::swap_lst_to_usdc(
             LstUsdcAccounts {
                 user: &a.user,
-                hylo: &mut a.hylo,
+                hylo: &a.hylo,
                 pool_config: &a.pool_config,
                 lst_header: &a.lst_header,
                 pool_state: &a.pool_state,
-                usdc_pair: &mut a.usdc_pair,
+                usdc_pair: &a.usdc_pair,
                 stablecoin_mint_auth: &a.stablecoin_mint_auth,
                 lst_vault_auth: &a.lst_vault_auth,
                 usdc_vault_auth: &a.usdc_vault_auth,

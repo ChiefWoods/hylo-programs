@@ -3,7 +3,8 @@ pub use fix::prelude::UFixValue64;
 
 use crate::constants::*;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, InitSpace)]
+#[repr(u8)]
 pub enum AddressField {
     Admin,
     Treasury,
@@ -20,7 +21,8 @@ impl AsRef<[u8]> for AddressField {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, InitSpace)]
+#[repr(u8)]
 pub enum LstStakePoolProgram {
     Spl,
     SanctumSpl,

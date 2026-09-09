@@ -15,13 +15,15 @@ pub struct PauseEarnPool<'info> {
         seeds::program = crate::hylo_exchange::ID,
         has_one = pause_authority,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [POOL_CONFIG], bump)]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
 }
 
 pub fn handler(ctx: Context<PauseEarnPool>) -> Result<PauseEvent> {
-    ctx.accounts.pool_config.pause()?;
+    let mut pool_config = ctx.accounts.pool_config.load_mut()?;
+
+    pool_config.pause()?;
     let event = PauseEvent {};
     emit_cpi!(event.clone());
     Ok(event)

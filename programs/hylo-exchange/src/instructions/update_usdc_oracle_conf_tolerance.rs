@@ -13,16 +13,16 @@ pub struct UpdateUsdcOracleConfTolerance<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
 }
 
 pub fn handler(
     ctx: Context<UpdateUsdcOracleConfTolerance>,
     new_oracle_conf_tolerance: UFixValue64,
 ) -> Result<UpdateOracleConfEvent> {
-    let pair = &mut ctx.accounts.usdc_pair;
+    let pair = &mut ctx.accounts.usdc_pair.load_mut()?;
     let old_oracle_conf_tolerance = pair.oracle_conf_tolerance;
     pair.update_oracle_conf_tolerance(new_oracle_conf_tolerance)?;
     let event = UpdateOracleConfEvent {

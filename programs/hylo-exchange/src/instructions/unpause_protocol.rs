@@ -14,11 +14,13 @@ pub struct UnpauseProtocol<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(ctx: Context<UnpauseProtocol>) -> Result<UnpauseEvent> {
-    ctx.accounts.hylo.unpause_protocol()?;
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
+    hylo.unpause_protocol()?;
     let event = UnpauseEvent {};
     emit_cpi!(event.clone());
     Ok(event)

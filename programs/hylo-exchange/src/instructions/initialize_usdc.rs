@@ -19,15 +19,15 @@ pub struct InitializeUsdc<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         init,
         payer = admin,
-        space = UsdcPair::DISCRIMINATOR.len() + UsdcPair::INIT_SPACE,
+        space = UsdcPair::DISCRIMINATOR.len() + core::mem::size_of::<UsdcPair>(),
         seeds = [USDC_PAIR],
         bump,
     )]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [USDC_VAULT_AUTH, usdc_mint.key().as_ref()],
@@ -87,7 +87,7 @@ pub fn handler(
     let oracle_conf_tolerance = validate_conf_tolerance(oracle_conf_tolerance)?;
     let par_tolerance = ParTolerance::validated(par_tolerance)?;
 
-    ctx.accounts.usdc_pair.set_inner(UsdcPair {
+    *ctx.accounts.usdc_pair.load_init()? = UsdcPair {
         vault_auth_bump: ctx.bumps.usdc_vault_auth,
         fee_auth_bump: ctx.bumps.usdc_fee_auth,
         mint_fee,
@@ -98,7 +98,7 @@ pub fn handler(
         par_tolerance,
         redeem_fee,
         _reserved: [0; 109],
-    });
+    };
 
     let event = InitializeUsdcEvent {
         vault_auth_bump: ctx.bumps.usdc_vault_auth,

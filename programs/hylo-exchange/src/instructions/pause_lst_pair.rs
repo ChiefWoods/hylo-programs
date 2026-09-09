@@ -14,11 +14,13 @@ pub struct PauseLstPair<'info> {
         bump,
         has_one = pause_authority,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(ctx: Context<PauseLstPair>) -> Result<PauseEvent> {
-    ctx.accounts.hylo.pause_lst_pair()?;
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
+    hylo.pause_lst_pair()?;
     let event = PauseEvent {};
     emit_cpi!(event.clone());
     Ok(event)

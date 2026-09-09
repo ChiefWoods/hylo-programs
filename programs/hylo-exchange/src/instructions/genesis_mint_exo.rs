@@ -27,30 +27,30 @@ pub struct GenesisMintExo<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, levercoin_mint.key().as_ref()],
-        bump = exo_pair.levercoin_auth_bump,
+        bump = exo_pair.load()?.levercoin_auth_bump,
     )]
     pub levercoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [EXO_VAULT_AUTH, collateral_mint.key().as_ref()],
-        bump = exo_pair.vault_auth_bump,
+        bump = exo_pair.load()?.vault_auth_bump,
     )]
     pub vault_auth: UncheckedAccount<'info>,
     #[account(
@@ -59,46 +59,49 @@ pub struct GenesisMintExo<'info> {
         associated_token::authority = vault_auth,
         associated_token::token_program = token_program,
     )]
-    pub collateral_vault: Account<'info, TokenAccount>,
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = collateral_mint,
         token::authority = admin,
         token::token_program = token_program,
     )]
-    pub admin_collateral_ta: Account<'info, TokenAccount>,
+    pub admin_collateral_ta: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = levercoin_mint,
         token::authority = dead,
         token::token_program = token_program,
     )]
-    pub dead_levercoin_ta: Account<'info, TokenAccount>,
+    pub dead_levercoin_ta: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = stablecoin_mint,
         token::authority = dead,
         token::token_program = token_program,
     )]
-    pub dead_stablecoin_ta: Account<'info, TokenAccount>,
-    pub collateral_mint: Account<'info, Mint>,
+    pub dead_stablecoin_ta: Box<Account<'info, TokenAccount>>,
+    pub collateral_mint: Box<Account<'info, Mint>>,
     #[account(
         mut,
         seeds = [EXO_LEVERCOIN, collateral_mint.key().as_ref()],
-        bump = exo_pair.levercoin_mint_bump,
+        bump = exo_pair.load()?.levercoin_mint_bump,
     )]
-    pub levercoin_mint: Account<'info, Mint>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
-    pub stablecoin_mint: Account<'info, Mint>,
+    pub levercoin_mint: Box<Account<'info, Mint>>,
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
+    pub stablecoin_mint: Box<Account<'info, Mint>>,
     /// CHECK: Bound to the pair oracle in the handler.
     pub collateral_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
 }
 
 pub fn handler(ctx: Context<GenesisMintExo>, amount: u64) -> Result<GenesisMintExoEvent> {
+    let hylo = ctx.accounts.hylo.load()?;
+    let mut exo_pair = ctx.accounts.exo_pair.load_mut()?;
+
     require!(amount > 0, ErrorCode::ExoGenesisConstraints);
     require!(
-        ctx.accounts.exo_pair.virtual_stablecoin.supply()? == UFix64::zero(),
+        exo_pair.virtual_stablecoin.supply()? == UFix64::zero(),
         ErrorCode::ExoGenesisConstraints
     );
     require!(
@@ -107,7 +110,7 @@ pub fn handler(ctx: Context<GenesisMintExo>, amount: u64) -> Result<GenesisMintE
     );
     require_keys_eq!(
         ctx.accounts.collateral_usd_pyth_feed.key(),
-        ctx.accounts.exo_pair.oracle,
+        exo_pair.oracle,
         ErrorCode::ExoOracleInvalid
     );
 
@@ -116,14 +119,10 @@ pub fn handler(ctx: Context<GenesisMintExo>, amount: u64) -> Result<GenesisMintE
     let price_update = PriceUpdateV2::try_deserialize(&mut oracle_data)
         .map_err(|_| error!(ErrorCode::ExoOracleInvalid))?;
     require!(
-        price_update.price_message.feed_id == ctx.accounts.exo_pair.oracle_feed_id,
+        price_update.price_message.feed_id == exo_pair.oracle_feed_id,
         ErrorCode::ExoOracleInvalid
     );
-    let oracle_price = query_pyth_oracle(
-        &clock,
-        &price_update,
-        ctx.accounts.exo_pair.oracle_config()?,
-    )?;
+    let oracle_price = query_pyth_oracle(&clock, &price_update, exo_pair.oracle_config()?)?;
 
     let collateral_n9 = normalize_mint_exp(&ctx.accounts.collateral_mint, amount)?;
     let tvl_n9 = total_value_locked(collateral_n9, oracle_price.spot)?;
@@ -168,7 +167,7 @@ pub fn handler(ctx: Context<GenesisMintExo>, amount: u64) -> Result<GenesisMintE
     )?;
 
     let stablecoin_mint_key = ctx.accounts.stablecoin_mint.key();
-    let stablecoin_auth_bump = [ctx.accounts.hylo.stablecoin_auth_bump];
+    let stablecoin_auth_bump = [hylo.stablecoin_auth_bump];
     let stablecoin_auth_seeds: &[&[u8]] = &[
         MINT_AUTH,
         stablecoin_mint_key.as_ref(),
@@ -188,7 +187,7 @@ pub fn handler(ctx: Context<GenesisMintExo>, amount: u64) -> Result<GenesisMintE
     )?;
 
     let levercoin_mint_key = ctx.accounts.levercoin_mint.key();
-    let levercoin_auth_bump = [ctx.accounts.exo_pair.levercoin_auth_bump];
+    let levercoin_auth_bump = [exo_pair.levercoin_auth_bump];
     let levercoin_auth_seeds: &[&[u8]] =
         &[MINT_AUTH, levercoin_mint_key.as_ref(), &levercoin_auth_bump];
     token::mint_to(
@@ -204,11 +203,8 @@ pub fn handler(ctx: Context<GenesisMintExo>, amount: u64) -> Result<GenesisMintE
         levercoin_minted.bits,
     )?;
 
-    ctx.accounts
-        .exo_pair
-        .virtual_stablecoin
-        .mint(stablecoin_minted)?;
-    ctx.accounts.exo_pair.virtual_stablecoin_supply_floor = stablecoin_minted.into();
+    exo_pair.virtual_stablecoin.mint(stablecoin_minted)?;
+    exo_pair.virtual_stablecoin_supply_floor = stablecoin_minted.into();
 
     let event = GenesisMintExoEvent {
         exo_pair: ctx.accounts.exo_pair.key(),

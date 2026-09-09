@@ -15,22 +15,24 @@ pub struct InitializePoolDrawdownExo<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         mut,
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
         has_one = collateral_mint,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     pub collateral_mint: Account<'info, Mint>,
 }
 
 pub fn handler(ctx: Context<InitializePoolDrawdownExo>) -> Result<()> {
-    match ctx.accounts.exo_pair.pool_drawdown.outstanding() {
+    let mut exo_pair = ctx.accounts.exo_pair.load_mut()?;
+
+    match exo_pair.pool_drawdown.outstanding() {
         Ok(_) => err!(ErrorCode::AdminNoop),
         Err(_) => {
-            ctx.accounts.exo_pair.pool_drawdown = PoolDrawdown::default();
+            exo_pair.pool_drawdown = PoolDrawdown::default();
             Ok(())
         }
     }

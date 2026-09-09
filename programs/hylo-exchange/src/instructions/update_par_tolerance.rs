@@ -13,16 +13,16 @@ pub struct UpdateParTolerance<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
 }
 
 pub fn handler(
     ctx: Context<UpdateParTolerance>,
     new_par_tolerance: UFixValue64,
 ) -> Result<UpdateParToleranceEvent> {
-    let pair = &mut ctx.accounts.usdc_pair;
+    let pair = &mut ctx.accounts.usdc_pair.load_mut()?;
     let old_par_tolerance = pair.par_tolerance.tolerance;
     pair.update_par_tolerance(new_par_tolerance)?;
     let event = UpdateParToleranceEvent {

@@ -14,14 +14,14 @@ pub struct UpdateOracleConfTolerance<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(
     ctx: Context<UpdateOracleConfTolerance>,
     new_oracle_conf_tolerance: UFixValue64,
 ) -> Result<UpdateOracleConfEvent> {
-    let hylo = &mut ctx.accounts.hylo;
+    let hylo = &mut ctx.accounts.hylo.load_mut()?;
     let old_oracle_conf_tolerance = hylo.oracle_conf_tolerance;
     hylo.update_oracle_conf_tolerance(new_oracle_conf_tolerance)?;
     let event = UpdateOracleConfEvent {

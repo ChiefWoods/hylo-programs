@@ -21,16 +21,16 @@ pub struct UserWithdraw<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(mut, seeds = [POOL_CONFIG], bump)]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_config: AccountLoader<'info, PoolConfig>,
     #[account(
         seeds = [&HYLO],
         bump,
         seeds::program = crate::hylo_exchange::ID
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         seeds = [&HYUSD],
-        bump = hylo.stablecoin_mint_bump,
+        bump = hylo.load()?.stablecoin_mint_bump,
         seeds::program = crate::hylo_exchange::ID
     )]
     pub stablecoin_mint: Account<'info, Mint>,
@@ -63,7 +63,7 @@ pub struct UserWithdraw<'info> {
     )]
     pub user_lp_token_ta: Account<'info, TokenAccount>,
     /// CHECK: PDA is constrained by its fixed seed below.
-    #[account(seeds = [POOL_AUTH], bump = pool_config.pool_auth_bump)]
+    #[account(seeds = [POOL_AUTH], bump = pool_config.load()?.pool_auth_bump)]
     pub pool_auth: UncheckedAccount<'info>,
     #[account(
         mut,
@@ -72,7 +72,7 @@ pub struct UserWithdraw<'info> {
         associated_token::token_program = token_program,
     )]
     pub stablecoin_pool: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [STAKED_HYUSD], bump = pool_config.lp_token_mint_bump)]
+    #[account(mut, seeds = [STAKED_HYUSD], bump = pool_config.load()?.lp_token_mint_bump)]
     pub lp_token_mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,
 }
@@ -82,11 +82,11 @@ pub fn handler(
     amount_lp_token: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<UserWithdrawEvent> {
-    require!(
-        !ctx.accounts.hylo.protocol_paused,
-        ErrorCode::ProtocolPaused
-    );
-    require!(!ctx.accounts.pool_config.paused, ErrorCode::EarnPoolPaused);
+    let hylo = ctx.accounts.hylo.load()?;
+    let mut pool_config = ctx.accounts.pool_config.load_mut()?;
+
+    require!(!hylo.protocol_paused, ErrorCode::ProtocolPaused);
+    require!(!pool_config.paused, ErrorCode::EarnPoolPaused);
     require!(amount_lp_token > 0, CoreError::ZeroAmount);
 
     let amount_lp = UFix64::<N6>::new(amount_lp_token);
@@ -100,12 +100,11 @@ pub fn handler(
     );
 
     let epoch = Clock::get()?.epoch;
-    ctx.accounts
-        .pool_config
+    pool_config
         .withdrawal_limiter
         .validate_withdrawal(gross, epoch)?;
 
-    let withdrawal_fee: UFix64<N4> = ctx.accounts.pool_config.withdrawal_fee.try_into()?;
+    let withdrawal_fee: UFix64<N4> = pool_config.withdrawal_fee.try_into()?;
     let extract = stablecoin_withdrawal_fee(gross, withdrawal_fee)?;
     require!(
         extract.amount_remaining > UFix64::zero(),
@@ -115,7 +114,7 @@ pub fn handler(
         slippage.validate_token_out(extract.amount_remaining)?;
     }
 
-    let pool_auth_bump = [ctx.accounts.pool_config.pool_auth_bump];
+    let pool_auth_bump = [pool_config.pool_auth_bump];
     let pool_auth_seeds: &[&[u8]] = &[POOL_AUTH, &pool_auth_bump];
     let decimals = ctx.accounts.stablecoin_mint.decimals;
 
@@ -147,8 +146,7 @@ pub fn handler(
         amount_lp_token,
     )?;
 
-    ctx.accounts
-        .pool_config
+    pool_config
         .withdrawal_limiter
         .register_withdrawal(gross, epoch)?;
 

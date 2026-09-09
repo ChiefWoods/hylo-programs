@@ -23,15 +23,15 @@ pub struct RegisterExo<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(
         init,
         payer = admin,
-        space = ExoPair::DISCRIMINATOR.len() + ExoPair::INIT_SPACE,
+        space = ExoPair::DISCRIMINATOR.len() + core::mem::size_of::<ExoPair>(),
         seeds = [EXO_PAIR, collateral_mint.key().as_ref()],
         bump,
     )]
-    pub exo_pair: Account<'info, ExoPair>,
+    pub exo_pair: AccountLoader<'info, ExoPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, levercoin_mint.key().as_ref()],
@@ -165,7 +165,7 @@ pub fn handler(
         None,
     )?;
 
-    ctx.accounts.exo_pair.set_inner(ExoPair {
+    *ctx.accounts.exo_pair.load_init()? = ExoPair {
         collateral_mint: ctx.accounts.collateral_mint.key(),
         levercoin_mint_bump: ctx.bumps.levercoin_mint,
         levercoin_auth_bump: ctx.bumps.levercoin_auth,
@@ -188,7 +188,7 @@ pub fn handler(
         pool_drawdown: PoolDrawdown::default(),
         virtual_stablecoin_supply_floor: UFixValue64::new(0, -6),
         _reserved: [0; 91],
-    });
+    };
 
     let event = RegisterExoEvent {
         exo_pair: ctx.accounts.exo_pair.key(),

@@ -15,14 +15,16 @@ pub struct InitializePoolDrawdownLst<'info> {
         bump,
         has_one = admin,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
 }
 
 pub fn handler(ctx: Context<InitializePoolDrawdownLst>) -> Result<()> {
-    match ctx.accounts.hylo.pool_drawdown.outstanding() {
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
+    match hylo.pool_drawdown.outstanding() {
         Ok(_) => err!(ErrorCode::AdminNoop),
         Err(_) => {
-            ctx.accounts.hylo.pool_drawdown = PoolDrawdown::default();
+            hylo.pool_drawdown = PoolDrawdown::default();
             Ok(())
         }
     }

@@ -3,8 +3,8 @@ use fix::prelude::{UFix64, UFixValue64, N4};
 
 use super::*;
 
-#[account]
-#[derive(InitSpace)]
+#[account(zero_copy(unsafe))]
+#[repr(C)]
 pub struct PoolConfig {
     pub _dead_admin: Pubkey,
     pub pool_auth_bump: u8,

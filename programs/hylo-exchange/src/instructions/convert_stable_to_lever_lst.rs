@@ -29,15 +29,15 @@ pub struct ConvertStableToLeverLst<'info> {
         has_one = stablecoin_mint,
         has_one = levercoin_mint,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     /// CHECK: Address is validated against SOL_USD.address in the handler.
     pub sol_usd_pyth_feed: UncheckedAccount<'info>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
     pub stablecoin_mint: Account<'info, Mint>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
@@ -60,12 +60,12 @@ pub struct ConvertStableToLeverLst<'info> {
         token::token_program = token_program,
     )]
     pub user_stablecoin_ta: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [XSOL], bump = hylo.levercoin_mint_bump)]
+    #[account(mut, seeds = [XSOL], bump = hylo.load()?.levercoin_mint_bump)]
     pub levercoin_mint: Account<'info, Mint>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, levercoin_mint.key().as_ref()],
-        bump = hylo.levercoin_auth_bump,
+        bump = hylo.load()?.levercoin_auth_bump,
     )]
     pub levercoin_auth: UncheckedAccount<'info>,
     #[account(
@@ -83,25 +83,27 @@ pub fn handler(
     amount_stablecoin: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<ConvertStableToLeverLstEvent> {
+    let mut hylo = ctx.accounts.hylo.load_mut()?;
+
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
     require!(amount_stablecoin > 0, CoreError::ZeroAmount);
     let clock = Clock::get()?;
-    lst_user_gates(&ctx.accounts.hylo, clock.epoch)?;
+    lst_user_gates(&hylo, clock.epoch)?;
 
     let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
     let exchange = LstExchangeContext::load(
         clock,
-        &ctx.accounts.hylo.total_sol_cache,
-        ctx.accounts.hylo.stablecoin_mint_threshold()?,
-        ctx.accounts.hylo.oracle_config()?,
-        ctx.accounts.hylo.levercoin_fees,
+        &hylo.total_sol_cache,
+        hylo.stablecoin_mint_threshold()?,
+        hylo.oracle_config()?,
+        hylo.levercoin_fees,
         &price_update,
-        ctx.accounts.hylo.virtual_stablecoin,
+        hylo.virtual_stablecoin,
         Some(&ctx.accounts.levercoin_mint),
-        ctx.accounts.hylo.lst_sell_curve_config,
-        ctx.accounts.hylo.lst_buy_curve_config,
+        hylo.lst_sell_curve_config,
+        hylo.lst_buy_curve_config,
     )?;
     require!(
         exchange.levercoin_mint_enabled(),
@@ -147,13 +149,11 @@ pub fn handler(
         ctx.accounts.user_levercoin_ta.to_account_info(),
         ctx.accounts.levercoin_auth.to_account_info(),
         ctx.accounts.levercoin_mint.key(),
-        ctx.accounts.hylo.levercoin_auth_bump,
+        hylo.levercoin_auth_bump,
         minted.bits,
     )?;
 
-    ctx.accounts
-        .hylo
-        .virtual_stablecoin
+    hylo.virtual_stablecoin
         .burn_limited(amount_remaining, SUPPLY_FLOOR)?;
 
     let event = ConvertStableToLeverLstEvent {

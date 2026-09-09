@@ -21,25 +21,25 @@ pub struct MintStablecoinUsdc<'info> {
         bump,
         has_one = stablecoin_mint,
     )]
-    pub hylo: Account<'info, Hylo>,
+    pub hylo: AccountLoader<'info, Hylo>,
     #[account(mut, seeds = [USDC_PAIR], bump)]
-    pub usdc_pair: Account<'info, UsdcPair>,
+    pub usdc_pair: AccountLoader<'info, UsdcPair>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [MINT_AUTH, stablecoin_mint.key().as_ref()],
-        bump = hylo.stablecoin_auth_bump,
+        bump = hylo.load()?.stablecoin_auth_bump,
     )]
     pub stablecoin_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [USDC_VAULT_AUTH, usdc_mint.key().as_ref()],
-        bump = usdc_pair.vault_auth_bump,
+        bump = usdc_pair.load()?.vault_auth_bump,
     )]
     pub usdc_vault_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
     #[account(
         seeds = [FEE_AUTH, usdc_mint.key().as_ref()],
-        bump = usdc_pair.fee_auth_bump,
+        bump = usdc_pair.load()?.fee_auth_bump,
     )]
     pub usdc_fee_auth: UncheckedAccount<'info>,
     /// CHECK: PDA is constrained by its seeds below.
@@ -54,39 +54,39 @@ pub struct MintStablecoinUsdc<'info> {
         associated_token::authority = usdc_vault_auth,
         associated_token::token_program = token_program,
     )]
-    pub usdc_collateral_vault: Account<'info, TokenAccount>,
+    pub usdc_collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = usdc_mint,
         associated_token::authority = usdc_fee_auth,
         associated_token::token_program = token_program,
     )]
-    pub usdc_fee_vault: Account<'info, TokenAccount>,
+    pub usdc_fee_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         associated_token::mint = stablecoin_mint,
         associated_token::authority = stablecoin_fee_auth,
         associated_token::token_program = token_program,
     )]
-    pub stablecoin_fee_vault: Account<'info, TokenAccount>,
+    pub stablecoin_fee_vault: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = stablecoin_mint,
         token::authority = user,
         token::token_program = token_program,
     )]
-    pub user_stablecoin_ta: Account<'info, TokenAccount>,
+    pub user_stablecoin_ta: Box<Account<'info, TokenAccount>>,
     #[account(
         mut,
         token::mint = usdc_mint,
         token::authority = user,
         token::token_program = token_program,
     )]
-    pub user_usdc_ta: Account<'info, TokenAccount>,
-    #[account(mut, seeds = [HYUSD], bump = hylo.stablecoin_mint_bump)]
-    pub stablecoin_mint: Account<'info, Mint>,
+    pub user_usdc_ta: Box<Account<'info, TokenAccount>>,
+    #[account(mut, seeds = [HYUSD], bump = hylo.load()?.stablecoin_mint_bump)]
+    pub stablecoin_mint: Box<Account<'info, Mint>>,
     #[account(address = anchor_spl::mint::USDC)]
-    pub usdc_mint: Account<'info, Mint>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
     /// CHECK: Address is validated against USDC_USD.address in the handler.
     pub usdc_usd_pyth_feed: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
@@ -97,15 +97,15 @@ pub fn handler(
     amount: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<MintStablecoinUsdcEvent> {
+    let hylo = ctx.accounts.hylo.load()?;
+    let mut usdc_pair = ctx.accounts.usdc_pair.load_mut()?;
+
     if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
     require!(amount > 0, CoreError::ZeroAmount);
-    require!(
-        !ctx.accounts.hylo.protocol_paused,
-        CoreError::ProtocolPaused
-    );
-    require!(!ctx.accounts.usdc_pair.paused, CoreError::PairPaused);
+    require!(!hylo.protocol_paused, CoreError::ProtocolPaused);
+    require!(!usdc_pair.paused, CoreError::PairPaused);
 
     let clock = Clock::get()?;
     let mut oracle_data: &[u8] = &ctx.accounts.usdc_usd_pyth_feed.try_borrow_data()?;
@@ -114,21 +114,14 @@ pub fn handler(
     if price_update.price_message.feed_id != USDC_USD.feed_id {
         return Err(ProgramError::InvalidAccountData.into());
     }
-    let oracle_price = query_pyth_oracle(
-        &clock,
-        &price_update,
-        ctx.accounts.usdc_pair.oracle_config()?,
-    )?;
-    ctx.accounts
-        .usdc_pair
-        .par_tolerance
-        .validate_spot(oracle_price.spot)?;
+    let oracle_price = query_pyth_oracle(&clock, &price_update, usdc_pair.oracle_config()?)?;
+    usdc_pair.par_tolerance.validate_spot(oracle_price.spot)?;
 
     let amount_in = UFix64::<N6>::new(amount);
     let FeeExtract {
         fees_extracted,
         amount_remaining,
-    } = AssetSwapConfig::new(ctx.accounts.usdc_pair.mint_fee)?.apply_fee(amount_in)?;
+    } = AssetSwapConfig::new(usdc_pair.mint_fee)?.apply_fee(amount_in)?;
     require!(amount_remaining > UFix64::zero(), CoreError::ZeroAmount);
     if let Some(slippage_config) = slippage_config.as_ref() {
         slippage_config.validate_token_out(amount_remaining)?;
@@ -164,7 +157,7 @@ pub fn handler(
     )?;
 
     let stablecoin_mint_key = ctx.accounts.stablecoin_mint.key();
-    let stablecoin_auth_bump = [ctx.accounts.hylo.stablecoin_auth_bump];
+    let stablecoin_auth_bump = [hylo.stablecoin_auth_bump];
     let stablecoin_auth_seeds: &[&[u8]] = &[
         MINT_AUTH,
         stablecoin_mint_key.as_ref(),
@@ -183,16 +176,13 @@ pub fn handler(
         amount_remaining.bits,
     )?;
 
-    ctx.accounts
-        .usdc_pair
-        .virtual_stablecoin
-        .mint(amount_remaining)?;
+    usdc_pair.virtual_stablecoin.mint(amount_remaining)?;
 
     let event = MintStablecoinUsdcEvent {
         usdc_deposited: amount_remaining.into(),
         usdc_fees: fees_extracted.into(),
         stablecoin_minted: amount_remaining.into(),
-        virtual_stablecoin_supply: ctx.accounts.usdc_pair.virtual_stablecoin.supply()?.into(),
+        virtual_stablecoin_supply: usdc_pair.virtual_stablecoin.supply()?.into(),
     };
     emit_cpi!(event.clone());
     Ok(event)
