@@ -24,6 +24,7 @@ pub struct CancelAddressUpdateEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct ConvertLeverToStableExoEvent {
     pub collateral_mint: Pubkey,
     pub levercoin_burned: UFixValue64,
@@ -36,6 +37,7 @@ pub struct ConvertLeverToStableExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct ConvertLeverToStableLstEvent {
     pub levercoin_burned: UFixValue64,
     pub levercoin_nav: UFixValue64,
@@ -45,6 +47,7 @@ pub struct ConvertLeverToStableLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct ConvertStableToLeverExoEvent {
     pub collateral_mint: Pubkey,
     pub stablecoin_burned: UFixValue64,
@@ -57,6 +60,7 @@ pub struct ConvertStableToLeverExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct ConvertStableToLeverLstEvent {
     pub stablecoin_burned: UFixValue64,
     pub stablecoin_fees: UFixValue64,
@@ -118,6 +122,7 @@ pub struct InitializeUsdcEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct MintLevercoinExoEvent {
     pub collateral_mint: Pubkey,
     pub minted: UFixValue64,
@@ -129,6 +134,7 @@ pub struct MintLevercoinExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct MintLevercoinLstEvent {
     pub minted: UFixValue64,
     pub nav: UFixValue64,
@@ -140,6 +146,7 @@ pub struct MintLevercoinLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct MintStablecoinExoEvent {
     pub collateral_mint: Pubkey,
     pub minted: UFixValue64,
@@ -152,6 +159,7 @@ pub struct MintStablecoinExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct MintStablecoinLstEvent {
     pub minted: UFixValue64,
     pub nav: UFixValue64,
@@ -186,6 +194,7 @@ pub struct ProposeAddressUpdateEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct RedeemLevercoinExoEvent {
     pub collateral_mint: Pubkey,
     pub redeemed: UFixValue64,
@@ -196,6 +205,7 @@ pub struct RedeemLevercoinExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct RedeemLevercoinLstEvent {
     pub redeemed: UFixValue64,
     pub nav: UFixValue64,
@@ -207,6 +217,7 @@ pub struct RedeemLevercoinLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct RedeemStablecoinExoEvent {
     pub collateral_mint: Pubkey,
     pub redeemed: UFixValue64,
@@ -219,6 +230,7 @@ pub struct RedeemStablecoinExoEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct RedeemStablecoinLstEvent {
     pub redeemed: UFixValue64,
     pub nav: UFixValue64,
@@ -319,6 +331,7 @@ pub struct SwapExoToUsdcEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct SwapLstToLstEvent {
     pub lst_a_mint: Pubkey,
     pub lst_a_in: UFixValue64,

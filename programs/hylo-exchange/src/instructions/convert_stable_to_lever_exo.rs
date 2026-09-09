@@ -1,7 +1,16 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use fix::prelude::{UFix64, N6};
+use hylo_core::error::CoreError;
+use hylo_core::exchange_context::ExchangeContext;
+use hylo_core::fees::controller::FeeExtract;
+
 use crate::constants::*;
+use crate::error::ErrorCode;
+use crate::instructions::exchange_ops::{exo_user_gates, load_exo_exchange, load_exo_price_update};
+use crate::instructions::stablecoin_ops::{burn_tokens, mint_stablecoin, transfer_user};
+use crate::oracle::oracle_event;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -94,6 +103,90 @@ pub fn handler(
     amount: u64,
     slippage_config: Option<SlippageConfig>,
 ) -> Result<ConvertStableToLeverExoEvent> {
-    let _ = (ctx, amount, slippage_config);
-    todo!()
+    require!(amount > 0, CoreError::ZeroAmount);
+    let clock = Clock::get()?;
+    exo_user_gates(&ctx.accounts.hylo, &ctx.accounts.exo_pair, clock.epoch)?;
+    let price_update =
+        load_exo_price_update(&ctx.accounts.collateral_usd_pyth_feed, &ctx.accounts.exo_pair)?;
+    let exchange = load_exo_exchange(
+        clock,
+        &ctx.accounts.exo_pair,
+        &ctx.accounts.collateral_mint,
+        &ctx.accounts.collateral_vault,
+        &price_update,
+        Some(&ctx.accounts.levercoin_mint),
+    )?;
+    require!(
+        exchange.levercoin_mint_enabled(),
+        ErrorCode::StableToLeverDisabled
+    );
+
+    let amount_in = UFix64::<N6>::new(amount);
+    let FeeExtract {
+        fees_extracted,
+        amount_remaining,
+    } = exchange.stablecoin_to_levercoin_fee(amount_in)?;
+    require!(amount_remaining > UFix64::zero(), CoreError::ZeroAmount);
+    let stablecoin_nav = exchange.stablecoin_nav()?;
+    let levercoin_nav = exchange.levercoin_mint_nav()?;
+    let minted = exchange
+        .swap_conversion()?
+        .stable_to_lever(amount_remaining)?;
+    require!(minted > UFix64::zero(), CoreError::ZeroAmount);
+    exchange
+        .levercoin_market_cap_limiter()?
+        .validate_token_out(minted)?;
+    if let Some(cfg) = slippage_config.as_ref() {
+        cfg.validate_token_out(minted)?;
+    }
+
+    let decimals = ctx.accounts.stablecoin_mint.decimals;
+    transfer_user(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.user_stablecoin_ta.to_account_info(),
+        ctx.accounts.stablecoin_mint.to_account_info(),
+        ctx.accounts.fee_vault.to_account_info(),
+        ctx.accounts.user.to_account_info(),
+        fees_extracted.bits,
+        decimals,
+    )?;
+    burn_tokens(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.stablecoin_mint.to_account_info(),
+        ctx.accounts.user_stablecoin_ta.to_account_info(),
+        ctx.accounts.user.to_account_info(),
+        amount_remaining.bits,
+    )?;
+    mint_stablecoin(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.levercoin_mint.to_account_info(),
+        ctx.accounts.user_levercoin_ta.to_account_info(),
+        ctx.accounts.levercoin_auth.to_account_info(),
+        ctx.accounts.levercoin_mint.key(),
+        ctx.accounts.exo_pair.levercoin_auth_bump,
+        minted.bits,
+    )?;
+
+    let floor = ctx
+        .accounts
+        .exo_pair
+        .virtual_stablecoin_supply_floor
+        .try_into()?;
+    ctx.accounts
+        .exo_pair
+        .virtual_stablecoin
+        .burn_limited(amount_remaining, floor)?;
+
+    let event = ConvertStableToLeverExoEvent {
+        collateral_mint: ctx.accounts.collateral_mint.key(),
+        stablecoin_burned: amount_remaining.into(),
+        stablecoin_fees: fees_extracted.into(),
+        stablecoin_nav: stablecoin_nav.into(),
+        levercoin_minted: minted.into(),
+        levercoin_nav: levercoin_nav.into(),
+        collateral_usd_price: oracle_event(exchange.collateral_oracle_price()),
+        virtual_stablecoin_supply: ctx.accounts.exo_pair.virtual_stablecoin.supply()?.into(),
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

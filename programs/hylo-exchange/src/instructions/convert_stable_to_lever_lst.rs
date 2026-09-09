@@ -1,9 +1,18 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use fix::prelude::{UFix64, N6};
+use hylo_core::error::CoreError;
+use hylo_core::exchange_context::{ExchangeContext, LstExchangeContext};
+use hylo_core::fees::controller::FeeExtract;
 use hylo_core::pyth::SOL_USD;
+use hylo_core::virtual_stablecoin::SUPPLY_FLOOR;
 
 use crate::constants::*;
+use crate::error::ErrorCode;
+use crate::instructions::exchange_ops::lst_user_gates;
+use crate::instructions::stablecoin_ops::{burn_tokens, mint_stablecoin, transfer_user};
+use crate::oracle::load_price_update;
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -77,6 +86,83 @@ pub fn handler(
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
-    let _ = (amount_stablecoin, slippage_config);
-    todo!()
+    require!(amount_stablecoin > 0, CoreError::ZeroAmount);
+    let clock = Clock::get()?;
+    lst_user_gates(&ctx.accounts.hylo, clock.epoch)?;
+
+    let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
+    let exchange = LstExchangeContext::load(
+        clock,
+        &ctx.accounts.hylo.total_sol_cache,
+        ctx.accounts.hylo.stablecoin_mint_threshold()?,
+        ctx.accounts.hylo.oracle_config()?,
+        ctx.accounts.hylo.levercoin_fees,
+        &price_update,
+        ctx.accounts.hylo.virtual_stablecoin,
+        Some(&ctx.accounts.levercoin_mint),
+        ctx.accounts.hylo.lst_sell_curve_config,
+        ctx.accounts.hylo.lst_buy_curve_config,
+    )?;
+    require!(
+        exchange.levercoin_mint_enabled(),
+        ErrorCode::StableToLeverDisabled
+    );
+
+    let amount_in = UFix64::<N6>::new(amount_stablecoin);
+    let FeeExtract {
+        fees_extracted,
+        amount_remaining,
+    } = exchange.stablecoin_to_levercoin_fee(amount_in)?;
+    require!(amount_remaining > UFix64::zero(), CoreError::ZeroAmount);
+    let stablecoin_nav = exchange.stablecoin_nav()?;
+    let levercoin_nav = exchange.levercoin_mint_nav()?;
+    let minted = exchange
+        .swap_conversion()?
+        .stable_to_lever(amount_remaining)?;
+    require!(minted > UFix64::zero(), CoreError::ZeroAmount);
+    if let Some(cfg) = slippage_config.as_ref() {
+        cfg.validate_token_out(minted)?;
+    }
+
+    let decimals = ctx.accounts.stablecoin_mint.decimals;
+    transfer_user(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.user_stablecoin_ta.to_account_info(),
+        ctx.accounts.stablecoin_mint.to_account_info(),
+        ctx.accounts.fee_vault.to_account_info(),
+        ctx.accounts.user.to_account_info(),
+        fees_extracted.bits,
+        decimals,
+    )?;
+    burn_tokens(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.stablecoin_mint.to_account_info(),
+        ctx.accounts.user_stablecoin_ta.to_account_info(),
+        ctx.accounts.user.to_account_info(),
+        amount_remaining.bits,
+    )?;
+    mint_stablecoin(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.levercoin_mint.to_account_info(),
+        ctx.accounts.user_levercoin_ta.to_account_info(),
+        ctx.accounts.levercoin_auth.to_account_info(),
+        ctx.accounts.levercoin_mint.key(),
+        ctx.accounts.hylo.levercoin_auth_bump,
+        minted.bits,
+    )?;
+
+    ctx.accounts
+        .hylo
+        .virtual_stablecoin
+        .burn_limited(amount_remaining, SUPPLY_FLOOR)?;
+
+    let event = ConvertStableToLeverLstEvent {
+        stablecoin_burned: amount_remaining.into(),
+        stablecoin_fees: fees_extracted.into(),
+        stablecoin_nav: stablecoin_nav.into(),
+        levercoin_minted: minted.into(),
+        levercoin_nav: levercoin_nav.into(),
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

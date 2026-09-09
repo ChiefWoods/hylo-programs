@@ -114,6 +114,7 @@ pub use settle_virtual_stablecoin_lst::*;
 pub mod settle_virtual_stablecoin_usdc;
 pub use settle_virtual_stablecoin_usdc::*;
 
+pub(crate) mod exchange_ops;
 pub(crate) mod rebalance;
 pub(crate) mod stablecoin_ops;
 

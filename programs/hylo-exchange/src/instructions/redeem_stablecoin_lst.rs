@@ -1,9 +1,17 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use fix::prelude::{CheckedSub, UFix64, N6, N9};
+use hylo_core::error::CoreError;
+use hylo_core::exchange_context::{ExchangeContext, LstExchangeContext};
+use hylo_core::fees::controller::FeeExtract;
 use hylo_core::pyth::SOL_USD;
+use hylo_core::virtual_stablecoin::SUPPLY_FLOOR;
 
 use crate::constants::*;
+use crate::instructions::exchange_ops::lst_user_gates;
+use crate::instructions::stablecoin_ops::{burn_tokens, transfer_pda};
+use crate::oracle::{load_price_update, oracle_event};
 
 #[allow(unused_imports)]
 use crate::{events::*, state::*};
@@ -78,6 +86,102 @@ pub fn handler(
     if SOL_USD.address != ctx.accounts.sol_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
-    let _ = (amount_to_redeem, slippage_config);
-    todo!()
+    require!(amount_to_redeem > 0, CoreError::ZeroAmount);
+    let clock = Clock::get()?;
+    let epoch = clock.epoch;
+    lst_user_gates(&ctx.accounts.hylo, epoch)?;
+
+    let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
+    let exchange = LstExchangeContext::load(
+        clock,
+        &ctx.accounts.hylo.total_sol_cache,
+        ctx.accounts.hylo.stablecoin_mint_threshold()?,
+        ctx.accounts.hylo.oracle_config()?,
+        ctx.accounts.hylo.levercoin_fees,
+        &price_update,
+        ctx.accounts.hylo.virtual_stablecoin,
+        None,
+        ctx.accounts.hylo.lst_sell_curve_config,
+        ctx.accounts.hylo.lst_buy_curve_config,
+    )?;
+
+    let redeemed = UFix64::<N6>::new(amount_to_redeem);
+    require!(
+        redeemed <= exchange.max_redeemable_stablecoin()?,
+        CoreError::RequestedStablecoinOverMaxMintable
+    );
+    let price = &ctx.accounts.lst_header.price_sol;
+    let nav = exchange.stablecoin_nav()?;
+    let gross_lst = exchange.token_conversion(price)?.token_to_lst(redeemed, nav)?;
+    require!(gross_lst > UFix64::zero(), CoreError::ZeroAmount);
+    require!(
+        gross_lst.bits <= ctx.accounts.lst_vault.amount,
+        CoreError::InsufficientLiquidity
+    );
+    let FeeExtract {
+        fees_extracted,
+        amount_remaining,
+    } = exchange.stablecoin_redeem_fee(price, gross_lst)?;
+    require!(amount_remaining > UFix64::zero(), CoreError::ZeroAmount);
+    if let Some(cfg) = slippage_config.as_ref() {
+        cfg.validate_token_out(amount_remaining)?;
+    }
+
+    let lst_mint_key = ctx.accounts.lst_mint.key();
+    let vault_bump = [ctx.bumps.vault_auth];
+    let vault_seeds: &[&[u8]] = &[VAULT_AUTH, lst_mint_key.as_ref(), &vault_bump];
+    let decimals = ctx.accounts.lst_mint.decimals;
+    transfer_pda(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.lst_vault.to_account_info(),
+        ctx.accounts.lst_mint.to_account_info(),
+        ctx.accounts.fee_vault.to_account_info(),
+        ctx.accounts.vault_auth.to_account_info(),
+        fees_extracted.bits,
+        decimals,
+        vault_seeds,
+    )?;
+    transfer_pda(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.lst_vault.to_account_info(),
+        ctx.accounts.lst_mint.to_account_info(),
+        ctx.accounts.user_lst_ta.to_account_info(),
+        ctx.accounts.vault_auth.to_account_info(),
+        amount_remaining.bits,
+        decimals,
+        vault_seeds,
+    )?;
+    burn_tokens(
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.stablecoin_mint.to_account_info(),
+        ctx.accounts.user_stablecoin_ta.to_account_info(),
+        ctx.accounts.user.to_account_info(),
+        redeemed.bits,
+    )?;
+
+    ctx.accounts
+        .hylo
+        .virtual_stablecoin
+        .burn_limited(redeemed, SUPPLY_FLOOR)?;
+    let before = UFix64::<N9>::new(ctx.accounts.lst_vault.amount);
+    ctx.accounts.hylo.refresh_lst_vault(
+        price,
+        before,
+        before
+            .checked_sub(&gross_lst)
+            .ok_or(CoreError::InsufficientLiquidity)?,
+        epoch,
+    )?;
+
+    let event = RedeemStablecoinLstEvent {
+        redeemed: redeemed.into(),
+        nav: nav.into(),
+        sol_usd_price: oracle_event(exchange.collateral_oracle_price()),
+        lst_mint: ctx.accounts.lst_mint.key(),
+        lst_sol_price: price.get_epoch_price(epoch)?.into(),
+        collateral_withdrawn: amount_remaining.into(),
+        fees_deposited: fees_extracted.into(),
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

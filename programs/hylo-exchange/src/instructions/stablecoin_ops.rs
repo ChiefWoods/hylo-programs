@@ -1,10 +1,89 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, MintTo};
+use anchor_spl::token::{self, Burn, MintTo, TransferChecked};
 use fix::prelude::{UFix64, N6};
 
 use crate::constants::*;
 use crate::hylo_earn_pool;
 use crate::state::PoolDrawdown;
+
+pub(crate) fn transfer_user<'info>(
+    token_program: AccountInfo<'info>,
+    from: AccountInfo<'info>,
+    mint: AccountInfo<'info>,
+    to: AccountInfo<'info>,
+    authority: AccountInfo<'info>,
+    amount: u64,
+    decimals: u8,
+) -> Result<()> {
+    if amount == 0 {
+        return Ok(());
+    }
+    token::transfer_checked(
+        CpiContext::new(
+            token_program,
+            TransferChecked {
+                from,
+                mint,
+                to,
+                authority,
+            },
+        ),
+        amount,
+        decimals,
+    )
+}
+
+pub(crate) fn transfer_pda<'info>(
+    token_program: AccountInfo<'info>,
+    from: AccountInfo<'info>,
+    mint: AccountInfo<'info>,
+    to: AccountInfo<'info>,
+    authority: AccountInfo<'info>,
+    amount: u64,
+    decimals: u8,
+    signer_seeds: &[&[u8]],
+) -> Result<()> {
+    if amount == 0 {
+        return Ok(());
+    }
+    token::transfer_checked(
+        CpiContext::new_with_signer(
+            token_program,
+            TransferChecked {
+                from,
+                mint,
+                to,
+                authority,
+            },
+            &[signer_seeds],
+        ),
+        amount,
+        decimals,
+    )
+}
+
+pub(crate) fn burn_tokens<'info>(
+    token_program: AccountInfo<'info>,
+    mint: AccountInfo<'info>,
+    from: AccountInfo<'info>,
+    authority: AccountInfo<'info>,
+    amount: u64,
+) -> Result<()> {
+    if amount == 0 {
+        return Ok(());
+    }
+    token::burn(
+        CpiContext::new(
+            token_program,
+            Burn {
+                mint,
+                from,
+                authority,
+            },
+        ),
+        amount,
+    )
+}
 
 pub(crate) fn mint_stablecoin<'info>(
     token_program: AccountInfo<'info>,
