@@ -1,7 +1,11 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount};
-
-use hylo_core::pyth::USDC_USD;
+use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, TransferChecked};
+use fix::prelude::{UFix64, N6};
+use hylo_core::asset_swap_config::AssetSwapConfig;
+use hylo_core::error::CoreError;
+use hylo_core::fees::controller::FeeExtract;
+use hylo_core::pyth::{query_pyth_oracle, USDC_USD};
+use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 
 use crate::constants::*;
 
@@ -96,6 +100,100 @@ pub fn handler(
     if USDC_USD.address != ctx.accounts.usdc_usd_pyth_feed.key() {
         return Err(ProgramError::InvalidAccountData.into());
     }
-    let _ = (amount, slippage_config);
-    todo!()
+    require!(amount > 0, CoreError::ZeroAmount);
+    require!(
+        !ctx.accounts.hylo.protocol_paused,
+        CoreError::ProtocolPaused
+    );
+    require!(!ctx.accounts.usdc_pair.paused, CoreError::PairPaused);
+
+    let clock = Clock::get()?;
+    let mut oracle_data: &[u8] = &ctx.accounts.usdc_usd_pyth_feed.try_borrow_data()?;
+    let price_update = PriceUpdateV2::try_deserialize(&mut oracle_data)
+        .map_err(|_| ProgramError::InvalidAccountData)?;
+    if price_update.price_message.feed_id != USDC_USD.feed_id {
+        return Err(ProgramError::InvalidAccountData.into());
+    }
+    let oracle_price = query_pyth_oracle(
+        &clock,
+        &price_update,
+        ctx.accounts.usdc_pair.oracle_config()?,
+    )?;
+    ctx.accounts
+        .usdc_pair
+        .par_tolerance
+        .validate_spot(oracle_price.spot)?;
+
+    let amount_in = UFix64::<N6>::new(amount);
+    let FeeExtract {
+        fees_extracted,
+        amount_remaining,
+    } = AssetSwapConfig::new(ctx.accounts.usdc_pair.mint_fee)?.apply_fee(amount_in)?;
+    require!(amount_remaining > UFix64::zero(), CoreError::ZeroAmount);
+    if let Some(slippage_config) = slippage_config.as_ref() {
+        slippage_config.validate_token_out(amount_remaining)?;
+    }
+
+    if fees_extracted > UFix64::zero() {
+        token::transfer_checked(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.user_usdc_ta.to_account_info(),
+                    mint: ctx.accounts.usdc_mint.to_account_info(),
+                    to: ctx.accounts.usdc_fee_vault.to_account_info(),
+                    authority: ctx.accounts.user.to_account_info(),
+                },
+            ),
+            fees_extracted.bits,
+            ctx.accounts.usdc_mint.decimals,
+        )?;
+    }
+    token::transfer_checked(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            TransferChecked {
+                from: ctx.accounts.user_usdc_ta.to_account_info(),
+                mint: ctx.accounts.usdc_mint.to_account_info(),
+                to: ctx.accounts.usdc_collateral_vault.to_account_info(),
+                authority: ctx.accounts.user.to_account_info(),
+            },
+        ),
+        amount_remaining.bits,
+        ctx.accounts.usdc_mint.decimals,
+    )?;
+
+    let stablecoin_mint_key = ctx.accounts.stablecoin_mint.key();
+    let stablecoin_auth_bump = [ctx.accounts.hylo.stablecoin_auth_bump];
+    let stablecoin_auth_seeds: &[&[u8]] = &[
+        MINT_AUTH,
+        stablecoin_mint_key.as_ref(),
+        &stablecoin_auth_bump,
+    ];
+    token::mint_to(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            MintTo {
+                mint: ctx.accounts.stablecoin_mint.to_account_info(),
+                to: ctx.accounts.user_stablecoin_ta.to_account_info(),
+                authority: ctx.accounts.stablecoin_auth.to_account_info(),
+            },
+            &[stablecoin_auth_seeds],
+        ),
+        amount_remaining.bits,
+    )?;
+
+    ctx.accounts
+        .usdc_pair
+        .virtual_stablecoin
+        .mint(amount_remaining)?;
+
+    let event = MintStablecoinUsdcEvent {
+        usdc_deposited: amount_remaining.into(),
+        usdc_fees: fees_extracted.into(),
+        stablecoin_minted: amount_remaining.into(),
+        virtual_stablecoin_supply: ctx.accounts.usdc_pair.virtual_stablecoin.supply()?.into(),
+    };
+    emit_cpi!(event.clone());
+    Ok(event)
 }

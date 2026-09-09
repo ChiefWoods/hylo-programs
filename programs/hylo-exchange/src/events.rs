@@ -161,6 +161,7 @@ pub struct MintStablecoinLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct MintStablecoinUsdcEvent {
     pub usdc_deposited: UFixValue64,
     pub usdc_fees: UFixValue64,
@@ -226,6 +227,7 @@ pub struct RedeemStablecoinLstEvent {
 }
 
 #[event]
+#[derive(Clone)]
 pub struct RedeemStablecoinUsdcEvent {
     pub stablecoin_burned: UFixValue64,
     pub stablecoin_fees: UFixValue64,
