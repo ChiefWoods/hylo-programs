@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::constants::*;
+use crate::error::ErrorCode;
 use crate::program::HyloExchange;
 #[allow(unused_imports)]
 use crate::state::*;
@@ -20,7 +21,7 @@ pub struct InitializeProtocol<'info> {
     )]
     pub hylo_exchange: Program<'info, HyloExchange>,
     #[account(
-        constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key())
+        constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key()) @ ErrorCode::AddressChangeUpgradeAuthority
     )]
     pub program_data: Account<'info, ProgramData>,
 }

@@ -15,7 +15,7 @@ pub struct ApproveAddressUpdate<'info> {
     /// CHECK: IDL metadata: relations=proposal.
     pub new_address: UncheckedAccount<'info>,
     #[account(
-        constraint = hylo_exchange.programdata_address()? == Some(program_data.key()) @ ErrorCode::AddressChangeUpgradeAuthority
+        constraint = hylo_exchange.programdata_address()? == Some(program_data.key())
     )]
     pub hylo_exchange: Program<'info, HyloExchange>,
     #[account(
