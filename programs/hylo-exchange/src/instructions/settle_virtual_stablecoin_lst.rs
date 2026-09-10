@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use fix::prelude::{CheckedSub, UFix64, N6};
+use hylo_core::error::CoreError;
 use hylo_core::exchange_context::{ExchangeContext, LstExchangeContext};
 use hylo_core::pyth::SOL_USD;
 use hylo_core::virtual_stablecoin::SUPPLY_FLOOR;
@@ -69,6 +70,10 @@ pub fn handler(
     }
 
     let clock = Clock::get()?;
+    require!(
+        hylo.yield_harvest_cache.epoch == clock.epoch,
+        CoreError::YieldHarvestNotRun
+    );
     let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
     let exchange = LstExchangeContext::load(
         clock,
