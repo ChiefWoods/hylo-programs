@@ -2,7 +2,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use fix::prelude::{CheckedAdd, CheckedSub, MulDiv, UFix64, N6, N9};
-use hylo_core::pyth::{query_pyth_oracle, SOL_USD};
+use hylo_core::exchange_context::{ExchangeContext, LstExchangeContext};
+use hylo_core::pyth::SOL_USD;
+use hylo_core::rebalance::mode::RebalanceMode;
 
 use crate::constants::*;
 use crate::error::ErrorCode;
@@ -96,10 +98,24 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
     )?;
 
     let price_update = load_price_update(&ctx.accounts.sol_usd_pyth_feed, &SOL_USD.feed_id)?;
-    let sol_usd = query_pyth_oracle(&clock, &price_update, hylo.oracle_config()?)?;
+    let exchange = LstExchangeContext::load(
+        clock,
+        &hylo.total_sol_cache,
+        hylo.stablecoin_mint_threshold()?,
+        hylo.oracle_config()?,
+        hylo.levercoin_fees,
+        &price_update,
+        hylo.virtual_stablecoin,
+        None,
+        hylo.lst_sell_curve_config,
+        hylo.lst_buy_curve_config,
+    )?;
+    let rebalance_mode = exchange.rebalance_mode();
+    let sol_usd = exchange.collateral_oracle_price();
 
     let blocks = &ctx.remaining_accounts[LST_REGISTRY_CALCULATOR_PREAMBLE_LEN..];
     let mut total_sol_harvested = UFix64::<N9>::zero();
+    let mut skip_yield_harvest = rebalance_mode < RebalanceMode::Neutral;
 
     for block in blocks.chunks_exact(LST_REGISTRY_BLOCK_LEN) {
         let header_info = &block[0];
@@ -119,6 +135,12 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
         require!(header.price_sol.epoch == epoch, ErrorCode::LstPriceOutdated);
 
         if header.prev_price_sol.epoch < header.price_sol.epoch {
+            let current_price: UFix64<N9> = header.price_sol.price.try_into()?;
+            let previous_price: UFix64<N9> = header.prev_price_sol.price.try_into()?;
+            skip_yield_harvest |= current_price < previous_price;
+        }
+
+        if !skip_yield_harvest && header.prev_price_sol.epoch < header.price_sol.epoch {
             let delta = header
                 .price_sol
                 .checked_delta(&header.prev_price_sol)
@@ -134,6 +156,22 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
 
         header.last_yield_harvest_epoch = epoch;
         lst_registry::save_header(header_info, &header)?;
+    }
+
+    if skip_yield_harvest {
+        let pool_balance = UFix64::<N6>::new(ctx.accounts.stablecoin_pool.amount);
+        hylo.yield_harvest_cache
+            .update(pool_balance, UFix64::zero(), epoch)?;
+
+        let event = HarvestYieldEvent {
+            total_sol_harvested: UFix64::<N9>::zero().into(),
+            fees_extracted: UFix64::<N6>::zero().into(),
+            token_to_pool: UFix64::<N6>::zero().into(),
+            pool_drawdown_repaid: UFix64::<N6>::zero().into(),
+            sol_usd_price: oracle_event(sol_usd),
+        };
+        emit_cpi!(event.clone());
+        return Ok(event);
     }
 
     let usd_yield_n9 = total_sol_harvested
