@@ -152,7 +152,8 @@ pub fn handler(ctx: Context<HarvestBorrowRate>) -> Result<HarvestBorrowRateEvent
     };
     let gross: UFix64<N6> = gross_n9
         .checked_convert()
-        .ok_or_else(|| error!(ErrorCode::TokenAmountPrecisionError))?;
+        .ok_or_else(|| error!(ErrorCode::TokenAmountPrecisionError))?
+        .min(exchange.max_swappable_stablecoin()?);
     let fee: UFix64<N4> = exo_pair.borrow_rate_fee.try_into()?;
     let extract = FeeExtract::new(fee, gross)?;
 
