@@ -119,6 +119,11 @@ fn adjusted_lst_price(
     header: &LstHeader,
     pool_state: &UncheckedAccount,
 ) -> Result<hylo_core::lst::sol_price::LstSolPrice> {
+    // Marinade prices are read differently, not supported yet
+    if header.stake_program == LstStakePoolProgram::Marinade {
+        return Err(error!(ErrorCode::LstStakePoolNotSupported));
+    }
+
     let true_price = SplStakePool::from_bytes(&pool_state.try_borrow_data()?)?.true_price()?;
     Ok(true_price.adjust_price(header.rebalance_fee()?)?)
 }
