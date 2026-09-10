@@ -196,17 +196,34 @@ struct PnlCpi<'info> {
     settlement_auth_bump: u8,
 }
 
+fn resulting_pnl_mode<E: ExchangeContext>(
+    exchange: &E,
+    new_total: UFix64<N9>,
+    pnl: RebalancePnl,
+) -> Result<RebalanceMode> {
+    let supply = exchange.virtual_stablecoin_supply()?;
+    let new_supply = match pnl {
+        RebalancePnl::Profit(profit) => supply
+            .checked_add(&profit)
+            .ok_or(CoreError::DestinationStablecoin)?,
+        RebalancePnl::Loss(loss) => supply.checked_sub(&loss).unwrap_or_else(UFix64::zero),
+        RebalancePnl::NoChange => supply,
+    };
+    Ok(exchange.projected_rebalance_mode(new_total, new_supply)?)
+}
+
 fn settle_pnl<'info>(
     pnl: RebalancePnl,
     virtual_stablecoin: &mut VirtualStablecoin,
     pool_drawdown: &mut PoolDrawdown,
     _floor: UFix64<N6>,
     mode: RebalanceMode,
+    resulting_mode: RebalanceMode,
     pool_balance: u64,
     cpi: PnlCpi<'info>,
 ) -> Result<(UFix64<N6>, UFix64<N6>)> {
     require!(
-        mode != RebalanceMode::Depeg,
+        mode != RebalanceMode::Depeg && resulting_mode != RebalanceMode::Depeg,
         ErrorCode::SettleRebalancePnlDisabled
     );
     match pnl {
@@ -380,6 +397,12 @@ pub fn swap_lst_to_usdc(
 
     let pnl = exchange.rebalance_pnl_buy_side(&lst_header.price_sol, requested, usdc_out)?;
     let lst_sol_price = conversion.lst_sol_price;
+    let sol_delta = lst_header.price_sol.convert_lst_to_sol(requested, epoch)?;
+    let new_total = exchange
+        .total_collateral()
+        .checked_add(&sol_delta)
+        .ok_or(CoreError::DestinationCollateral)?;
+    let resulting_mode = resulting_pnl_mode(&exchange, new_total, pnl)?;
 
     let usdc_mint_key = a.usdc_mint.key();
     let usdc_vault_bump = [usdc_pair.vault_auth_bump];
@@ -426,6 +449,7 @@ pub fn swap_lst_to_usdc(
             &mut PoolDrawdown::default(),
             SUPPLY_FLOOR,
             mode,
+            resulting_mode,
             pool_balance,
             cpi,
         )?;
@@ -447,6 +471,7 @@ pub fn swap_lst_to_usdc(
             &mut hylo.pool_drawdown,
             SUPPLY_FLOOR,
             mode,
+            resulting_mode,
             pool_balance,
             cpi,
         )?
@@ -532,6 +557,12 @@ pub fn swap_usdc_to_lst(
 
     let pnl = exchange.rebalance_pnl_sell_side(&lst_header.price_sol, lst_out, usdc_in)?;
     let lst_sol_price = conversion.lst_sol_price;
+    let sol_delta = lst_header.price_sol.convert_lst_to_sol(lst_out, epoch)?;
+    let new_total = exchange
+        .total_collateral()
+        .checked_sub(&sol_delta)
+        .ok_or(CoreError::DestinationCollateral)?;
+    let resulting_mode = resulting_pnl_mode(&exchange, new_total, pnl)?;
 
     let lst_mint_key = a.lst_mint.key();
     let lst_vault_bump = [a.lst_vault_auth_bump];
@@ -578,6 +609,7 @@ pub fn swap_usdc_to_lst(
             &mut PoolDrawdown::default(),
             SUPPLY_FLOOR,
             mode,
+            resulting_mode,
             pool_balance,
             cpi,
         )?;
@@ -599,6 +631,7 @@ pub fn swap_usdc_to_lst(
             &mut hylo.pool_drawdown,
             SUPPLY_FLOOR,
             mode,
+            resulting_mode,
             pool_balance,
             cpi,
         )?
@@ -754,6 +787,11 @@ pub fn swap_exo_to_usdc(
     }
 
     let pnl = exchange.rebalance_pnl_buy_side(requested, usdc_out)?;
+    let new_total = exchange
+        .total_collateral()
+        .checked_add(&requested)
+        .ok_or(CoreError::DestinationCollateral)?;
+    let resulting_mode = resulting_pnl_mode(&exchange, new_total, pnl)?;
     let projected = exchange.projected_rebalance_buy_state(requested)?;
     let curve_price = exchange
         .rebalance_buy_curve()?
@@ -796,6 +834,7 @@ pub fn swap_exo_to_usdc(
         &mut exo_pair.pool_drawdown,
         floor,
         exchange.rebalance_mode(),
+        resulting_mode,
         pool_balance,
         cpi,
     )?;
@@ -866,6 +905,11 @@ pub fn swap_usdc_to_exo(
     }
 
     let pnl = exchange.rebalance_pnl_sell_side(collateral_out_n9, usdc_in)?;
+    let new_total = exchange
+        .total_collateral()
+        .checked_sub(&collateral_out_n9)
+        .ok_or(CoreError::DestinationCollateral)?;
+    let resulting_mode = resulting_pnl_mode(&exchange, new_total, pnl)?;
     let projected = exchange.projected_rebalance_sell_state(usdc_in)?;
     let curve_price = exchange
         .rebalance_sell_curve()?
@@ -907,6 +951,7 @@ pub fn swap_usdc_to_exo(
         &mut exo_pair.pool_drawdown,
         floor,
         exchange.rebalance_mode(),
+        resulting_mode,
         pool_balance,
         cpi,
     )?;
