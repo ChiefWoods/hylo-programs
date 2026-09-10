@@ -22,7 +22,7 @@ use crate::hylo_earn_pool::{self, accounts::PoolConfig};
 use crate::oracle::{load_price_update, oracle_event};
 use crate::{events::*, state::*};
 
-use super::exchange_ops::require_exo_genesis;
+use super::exchange_ops::{require_drawdown_repaid, require_exo_genesis};
 
 pub struct LstUsdcAccounts<'a, 'info> {
     pub user: &'a Signer<'info>,
@@ -99,6 +99,7 @@ fn lst_gates(hylo: &Hylo, usdc_pair: &UsdcPair, epoch: u64) -> Result<()> {
     require!(!hylo.protocol_paused, CoreError::ProtocolPaused);
     require!(!hylo.lst_pair_paused, CoreError::PairPaused);
     require!(!usdc_pair.paused, CoreError::PairPaused);
+    require_drawdown_repaid(&hylo.pool_drawdown)?;
     require!(
         hylo.yield_harvest_cache.epoch == epoch,
         CoreError::YieldHarvestNotRun
@@ -111,6 +112,7 @@ fn exo_gates(hylo: &Hylo, exo_pair: &ExoPair, usdc_pair: &UsdcPair, epoch: u64) 
     require!(!exo_pair.paused, CoreError::PairPaused);
     require!(!usdc_pair.paused, CoreError::PairPaused);
     require_exo_genesis(exo_pair)?;
+    require_drawdown_repaid(&exo_pair.pool_drawdown)?;
     require!(
         exo_pair.borrow_rate_harvest_cache.epoch == epoch,
         CoreError::BorrowRateHarvestNotRun

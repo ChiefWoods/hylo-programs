@@ -9,11 +9,17 @@ use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 
 use crate::error::ErrorCode;
 use crate::oracle::load_price_update;
-use crate::state::{ExoPair, Hylo};
+use crate::state::{ExoPair, Hylo, PoolDrawdown};
+
+pub(crate) fn require_drawdown_repaid(drawdown: &PoolDrawdown) -> Result<()> {
+    require!(drawdown.is_repaid(), CoreError::DrawdownNotRepaid);
+    Ok(())
+}
 
 pub(crate) fn lst_user_gates(hylo: &Hylo, epoch: u64) -> Result<()> {
     require!(!hylo.protocol_paused, CoreError::ProtocolPaused);
     require!(!hylo.lst_pair_paused, CoreError::PairPaused);
+    require_drawdown_repaid(&hylo.pool_drawdown)?;
     require!(
         hylo.yield_harvest_cache.epoch == epoch,
         CoreError::YieldHarvestNotRun
@@ -34,6 +40,7 @@ pub(crate) fn exo_user_gates(hylo: &Hylo, exo_pair: &ExoPair, epoch: u64) -> Res
     require!(!hylo.protocol_paused, CoreError::ProtocolPaused);
     require!(!exo_pair.paused, CoreError::PairPaused);
     require_exo_genesis(exo_pair)?;
+    require_drawdown_repaid(&exo_pair.pool_drawdown)?;
     require!(
         exo_pair.borrow_rate_harvest_cache.epoch == epoch,
         CoreError::BorrowRateHarvestNotRun
