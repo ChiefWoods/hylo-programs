@@ -107,6 +107,10 @@ pub fn handler(
     let mut exo_pair = ctx.accounts.exo_pair.load_mut()?;
 
     require!(amount > 0, CoreError::ZeroAmount);
+    require!(
+        ctx.accounts.levercoin_mint.supply > 0,
+        ErrorCode::ExoGenesisConstraints
+    );
     let clock = Clock::get()?;
     exo_user_gates(&hylo, &exo_pair, clock.epoch)?;
     let price_update = load_exo_price_update(&ctx.accounts.collateral_usd_pyth_feed, &exo_pair)?;

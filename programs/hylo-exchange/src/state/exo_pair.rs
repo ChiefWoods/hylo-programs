@@ -163,6 +163,12 @@ impl ExoPair {
             self.virtual_stablecoin.supply()? > fix::prelude::UFix64::zero(),
             crate::error::ErrorCode::ExoPairZeroVirtualStablecoin
         );
+        let floor: fix::prelude::UFix64<fix::prelude::N6> =
+            self.virtual_stablecoin_supply_floor.try_into()?;
+        require!(
+            floor > fix::prelude::UFix64::zero(),
+            crate::error::ErrorCode::ExoPairZeroVirtualStablecoin
+        );
         self.paused = false;
         Ok(())
     }

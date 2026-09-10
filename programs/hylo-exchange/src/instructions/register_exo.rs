@@ -183,7 +183,7 @@ pub fn handler(
         sell_curve_config,
         buy_curve_config,
         borrow_rate_fee,
-        paused: false,
+        paused: true,
         levercoin_market_cap_limit,
         pool_drawdown: PoolDrawdown::default(),
         virtual_stablecoin_supply_floor: UFixValue64::new(0, -6),

@@ -22,6 +22,8 @@ use crate::hylo_earn_pool::{self, accounts::PoolConfig};
 use crate::oracle::{load_price_update, oracle_event};
 use crate::{events::*, state::*};
 
+use super::exchange_ops::require_exo_genesis;
+
 pub struct LstUsdcAccounts<'a, 'info> {
     pub user: &'a Signer<'info>,
     pub hylo: &'a AccountLoader<'info, Hylo>,
@@ -108,6 +110,7 @@ fn exo_gates(hylo: &Hylo, exo_pair: &ExoPair, usdc_pair: &UsdcPair, epoch: u64) 
     require!(!hylo.protocol_paused, CoreError::ProtocolPaused);
     require!(!exo_pair.paused, CoreError::PairPaused);
     require!(!usdc_pair.paused, CoreError::PairPaused);
+    require_exo_genesis(exo_pair)?;
     require!(
         exo_pair.borrow_rate_harvest_cache.epoch == epoch,
         CoreError::BorrowRateHarvestNotRun

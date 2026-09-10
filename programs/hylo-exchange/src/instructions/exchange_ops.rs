@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, TokenAccount};
-use fix::prelude::{UFix64, N9};
+use fix::prelude::{UFix64, N6, N9};
 use hylo_core::error::CoreError;
 use hylo_core::exchange_context::ExoExchangeContext;
 use hylo_core::solana_clock::SolanaClock;
@@ -21,9 +21,19 @@ pub(crate) fn lst_user_gates(hylo: &Hylo, epoch: u64) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn require_exo_genesis(exo_pair: &ExoPair) -> Result<()> {
+    let floor: UFix64<N6> = exo_pair.virtual_stablecoin_supply_floor.try_into()?;
+    require!(
+        floor > UFix64::zero(),
+        ErrorCode::ExoPairZeroVirtualStablecoin
+    );
+    Ok(())
+}
+
 pub(crate) fn exo_user_gates(hylo: &Hylo, exo_pair: &ExoPair, epoch: u64) -> Result<()> {
     require!(!hylo.protocol_paused, CoreError::ProtocolPaused);
     require!(!exo_pair.paused, CoreError::PairPaused);
+    require_exo_genesis(exo_pair)?;
     require!(
         exo_pair.borrow_rate_harvest_cache.epoch == epoch,
         CoreError::BorrowRateHarvestNotRun
