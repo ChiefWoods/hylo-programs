@@ -8,6 +8,7 @@ use hylo_core::fees::controller::FeeExtract;
 use hylo_core::util::normalize_mint_exp;
 
 use crate::constants::*;
+use crate::error::ErrorCode;
 use crate::instructions::exchange_ops::{
     exo_user_gates, load_exo_exchange, load_exo_price_update, split_gross_native,
 };
@@ -161,7 +162,8 @@ pub fn handler(
 
     let floor = exo_pair.virtual_stablecoin_supply_floor.try_into()?;
     exo_pair.virtual_stablecoin.burn_limited(redeemed, floor)?;
-    let net_n9 = normalize_mint_exp(&ctx.accounts.collateral_mint, net_native)?;
+    let net_n9 = normalize_mint_exp(&ctx.accounts.collateral_mint, net_native)
+        .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
     let stablecoin_supply = UFix64::<N6>::new(
         ctx.accounts
             .stablecoin_mint

@@ -48,7 +48,8 @@ pub(crate) fn load_exo_exchange<C: SolanaClock>(
     price_update: &PriceUpdateV2,
     levercoin_mint: Option<&Mint>,
 ) -> Result<ExoExchangeContext<C>> {
-    let total_collateral = normalize_mint_exp(collateral_mint, collateral_vault.amount)?;
+    let total_collateral = normalize_mint_exp(collateral_mint, collateral_vault.amount)
+        .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
     Ok(ExoExchangeContext::load(
         clock,
         total_collateral,
@@ -73,7 +74,8 @@ pub(crate) fn split_collateral_native(
     let net_native = amount
         .checked_sub(fee_native)
         .ok_or(CoreError::FeeExtraction)?;
-    let net_n9 = normalize_mint_exp(mint, net_native)?;
+    let net_n9 = normalize_mint_exp(mint, net_native)
+        .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
     Ok((fee_native, net_native, net_n9))
 }
 

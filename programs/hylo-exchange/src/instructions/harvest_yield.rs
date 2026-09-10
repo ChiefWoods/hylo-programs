@@ -181,8 +181,14 @@ pub fn handler(ctx: Context<HarvestYield>) -> Result<HarvestYieldEvent> {
         .checked_convert()
         .ok_or_else(|| error!(ErrorCode::TokenAmountPrecisionError))?;
 
-    let allocated = hylo.yield_harvest_config.apply_allocation(usd_yield)?;
-    let extract = hylo.yield_harvest_config.apply_fee(allocated)?;
+    let allocated = hylo
+        .yield_harvest_config
+        .apply_allocation(usd_yield)
+        .map_err(|_| error!(ErrorCode::YieldHarvestAllocation))?;
+    let extract = hylo
+        .yield_harvest_config
+        .apply_fee(allocated)
+        .map_err(|_| error!(ErrorCode::YieldHarvestAllocation))?;
 
     mint_stablecoin(
         ctx.accounts.token_program.to_account_info(),

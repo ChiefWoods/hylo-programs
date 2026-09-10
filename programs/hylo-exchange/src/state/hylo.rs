@@ -131,7 +131,9 @@ impl Hylo {
     }
 
     pub fn update_yield_harvest_config(&mut self, new_config: YieldHarvestConfig) -> Result<()> {
-        let new_config = new_config.validate()?;
+        let new_config = new_config
+            .validate()
+            .map_err(|_| error!(crate::error::ErrorCode::YieldHarvestConfigValidation))?;
         require!(
             self.yield_harvest_config.allocation != new_config.allocation
                 || self.yield_harvest_config.fee != new_config.fee,

@@ -124,7 +124,8 @@ pub fn handler(ctx: Context<GenesisMintExo>, amount: u64) -> Result<GenesisMintE
     );
     let oracle_price = query_pyth_oracle(&clock, &price_update, exo_pair.oracle_config()?)?;
 
-    let collateral_n9 = normalize_mint_exp(&ctx.accounts.collateral_mint, amount)?;
+    let collateral_n9 = normalize_mint_exp(&ctx.accounts.collateral_mint, amount)
+        .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
     let tvl_n9 = total_value_locked(collateral_n9, oracle_price.spot)?;
     let target_cr = UFix64::<N9>::new(GENESIS_TARGET_COLLATERAL_RATIO);
     let stablecoin_n9 = tvl_n9

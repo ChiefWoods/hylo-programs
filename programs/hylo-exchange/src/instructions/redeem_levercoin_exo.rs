@@ -162,7 +162,8 @@ pub fn handler(
         redeemed.bits,
     )?;
 
-    let net_n9 = normalize_mint_exp(&ctx.accounts.collateral_mint, net_native)?;
+    let net_n9 = normalize_mint_exp(&ctx.accounts.collateral_mint, net_native)
+        .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
     let event = RedeemLevercoinExoEvent {
         collateral_mint: ctx.accounts.collateral_mint.key(),
         redeemed: redeemed.into(),

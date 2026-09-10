@@ -638,7 +638,8 @@ fn load_exo_context<'info>(
     exo_pair: &ExoPair,
     price_update: &PriceUpdateV2,
 ) -> Result<ExoExchangeContext<Clock>> {
-    let total_collateral = normalize_mint_exp(a.collateral_mint, a.collateral_vault.amount)?;
+    let total_collateral = normalize_mint_exp(a.collateral_mint, a.collateral_vault.amount)
+        .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
     Ok(ExoExchangeContext::load(
         clock,
         total_collateral,
@@ -695,7 +696,8 @@ pub fn swap_exo_to_usdc(
     let requested_native = match amount {
         Some(raw) => {
             require!(raw > 0, CoreError::ZeroAmount);
-            let requested = normalize_mint_exp(a.collateral_mint, raw)?;
+            let requested = normalize_mint_exp(a.collateral_mint, raw)
+                .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
             require!(
                 requested <= buy_target,
                 CoreError::RebalanceBuyTargetExceeded
@@ -712,7 +714,8 @@ pub fn swap_exo_to_usdc(
         a.user_collateral_ta.amount >= requested_native,
         CoreError::InsufficientLiquidity
     );
-    let requested = normalize_mint_exp(a.collateral_mint, requested_native)?;
+    let requested = normalize_mint_exp(a.collateral_mint, requested_native)
+        .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
     require!(requested > UFix64::zero(), CoreError::ZeroAmount);
 
     let conversion = exchange.rebalance_buy_conversion(requested)?;

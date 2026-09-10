@@ -115,7 +115,8 @@ pub fn handler(
         ErrorCode::StablecoinMintDisabled
     );
 
-    let amount_n9 = normalize_mint_exp(&ctx.accounts.collateral_mint, amount)?;
+    let amount_n9 = normalize_mint_exp(&ctx.accounts.collateral_mint, amount)
+        .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
     let FeeExtract {
         fees_extracted,
         amount_remaining: _,

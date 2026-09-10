@@ -42,7 +42,9 @@ pub fn handler(
     let oracle_interval_secs = validate_interval_secs(oracle_interval_secs)?;
     let stablecoin_mint_threshold = validate_stablecoin_mint_threshold(stablecoin_mint_threshold)?;
     let levercoin_fees = levercoin_fees.validate()?;
-    let yield_harvest_config = yield_harvest_config.validate()?;
+    let yield_harvest_config = yield_harvest_config
+        .validate()
+        .map_err(|_| error!(ErrorCode::YieldHarvestConfigValidation))?;
     let current_epoch = Clock::get()?.epoch;
 
     let zero_fee = UFixValue64::new(0, -4);

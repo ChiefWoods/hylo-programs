@@ -99,7 +99,8 @@ pub fn handler(
     let total_collateral = normalize_mint_exp(
         &ctx.accounts.collateral_mint,
         ctx.accounts.collateral_vault.amount,
-    )?;
+    )
+    .map_err(|_| error!(ErrorCode::ExoAmountUpConversion))?;
     let exchange = ExoExchangeContext::load(
         clock,
         total_collateral,
